@@ -23,7 +23,7 @@ The snippet looks like this:
   Purchase
 </a>
 <script
-  src="https://cdn.jsdelivr.net/npm/@ofauth/login-embed@0.1/dist/embed.global.js"
+  src="https://unpkg.com/@ofauth/login-embed@^1.0.0/dist/embed.global.js"
   defer
   data-auto-init
 ></script>

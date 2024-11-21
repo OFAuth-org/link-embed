@@ -10,7 +10,7 @@
 		"publish-new": "bun scripts/publish.js"
 	},
 	"exports": {
-		"./embed": {
+		".": {
 			"types": "./dist/embed.d.ts",
 			"default": "./dist/embed.js"
 		}
