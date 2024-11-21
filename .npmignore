@@ -1,2 +1,9 @@
+.github/
+.git/
+node_modules/
 src/
+tests/
+.gitignore
+.npmrc
 tsconfig.json
+scripts/

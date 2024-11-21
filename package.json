@@ -6,7 +6,8 @@
 	"description": "Login Embed for OFAuth",
 	"scripts": {
 		"dev": "tsup --watch",
-		"build": "tsup --minify terser --sourcemap"
+		"build": "tsup --minify terser --sourcemap",
+		"publish-new": "node scripts/publish.js"
 	},
 	"exports": {
 		"./embed": {
