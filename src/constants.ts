@@ -1,0 +1,1 @@
+export const OFAUTH_LOGIN_EVENT = "OFAUTH_LOGIN";

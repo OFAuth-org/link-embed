@@ -1,0 +1,32 @@
+{
+	"name": "@ofauth/login-embed",
+	"version": "0.0.1",
+	"type": "module",
+	"author": "OFAuth",
+	"description": "Login Embed for OFAuth",
+	"scripts": {
+		"dev": "tsup --watch",
+		"build": "tsup --minify terser --sourcemap"
+	},
+	"exports": {
+		"./embed": {
+			"types": "./dist/embed.d.ts",
+			"default": "./dist/embed.js"
+		}
+	},
+	"devDependencies": {
+		"terser": "^5.36.0",
+		"tsup": "^8.3.5",
+		"typescript": "latest"
+	},
+	"publishConfig": {
+		"access": "public"
+	},
+	"keywords": [
+		"ofauth",
+		"onlyfans",
+		"login",
+		"account",
+		"link"
+	]
+}
