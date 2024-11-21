@@ -1,6 +1,6 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
-const { execSync } = require('child_process');
+const { $ } = require('bun');
 const readline = require('readline');
 
 const rl = readline.createInterface({
@@ -8,9 +8,9 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-const execute = (command) => {
+const execute = async (command) => {
   try {
-    execSync(command, { stdio: 'inherit' });
+    await $`${command}`;
   } catch (error) {
     console.error('Error executing command:', command);
     process.exit(1);
@@ -18,23 +18,23 @@ const execute = (command) => {
 };
 
 const promptVersion = () => {
-  rl.question('Select version bump (patch | minor | major): ', (bumpType) => {
+  rl.question('Select version bump (patch | minor | major): ', async (bumpType) => {
     if (!['patch', 'minor', 'major'].includes(bumpType)) {
       console.error('Invalid version type. Please use patch, minor, or major');
       rl.close();
       process.exit(1);
     }
-
+    
     try {
       // Ensure working directory is clean
-      execute('git diff-index --quiet HEAD --');
+      await execute('git diff-index --quiet HEAD --');
       
       // Bump version and create git tag
-      execute(`npm version ${bumpType}`);
+      await execute(`npm version ${bumpType}`);
       
       // Push changes and tags
-      execute('git push');
-      execute('git push --tags');
+      await execute('git push');
+      await execute('git push --tags');
 
       console.log('\n✨ Successfully pushed new version! GitHub Actions will handle npm publishing.\n');
     } catch (error) {
@@ -47,4 +47,4 @@ const promptVersion = () => {
 
 // Start the script
 console.log('\n📦 Publishing new version...\n');
-promptVersion(); 
+promptVersion();

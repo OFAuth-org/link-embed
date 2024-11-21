@@ -7,7 +7,7 @@
 	"scripts": {
 		"dev": "tsup --watch",
 		"build": "tsup --minify terser --sourcemap",
-		"publish-new": "node scripts/publish.js"
+		"publish-new": "bun scripts/publish.js"
 	},
 	"exports": {
 		"./embed": {
