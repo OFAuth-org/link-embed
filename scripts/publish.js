@@ -27,7 +27,10 @@ const promptVersion = () => {
     
     try {
       // Ensure working directory is clean
-      await execute('git diff-index --quiet HEAD --');
+      const { stdout } = await $`git status --porcelain`;
+      if (stdout.length > 0) {
+        throw new Error('Working directory is not clean');
+      }
       
       // Bump version and create git tag
       await execute(`npm version ${bumpType}`);
