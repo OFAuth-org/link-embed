@@ -1,6 +1,6 @@
 {
 	"name": "@ofauth/login-embed",
-	"version": "0.0.1",
+	"version": "1.0.0",
 	"type": "module",
 	"author": "OFAuth",
 	"description": "Login Embed for OFAuth",
