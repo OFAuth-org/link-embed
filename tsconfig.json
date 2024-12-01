@@ -20,6 +20,6 @@
 		"lib": ["esnext", "dom"],
 		"target": "es6"
 	},
-	"include": ["src"],
+	"include": ["src/**/*.ts"],
 	"exclude": ["node_modules", "dist"]
 }

@@ -1,26 +1,46 @@
-import { OFAUTH_LOGIN_EVENT } from "./constants";
-import type { EmbedLoginMessageLoaded, EmbedLoginMessageClose, EmbedLoginMessageSuccess } from "./types";
+import { OFAUTH_EVENT, Selectors } from "./constants";
+import type { EmbedLinkMessageLoaded, EmbedLinkMessageClose, EmbedLinkMessageSuccess } from "./types";
 
-const isEmbedLoginMessage = (
+const isEmbedLinkMessage = (
   message: any,
 ) => {
-  return message.type === OFAUTH_LOGIN_EVENT;
+  return message.type === OFAUTH_EVENT;
 };
 
+export interface LinkConfig {
+  url: string;
+  theme?: "light" | "dark";
+  onSuccess?: (data: EmbedLinkMessageSuccess) => void;
+  onLoad?: () => void;
+  onClose?: () => void;
+}
+
+export interface LinkHandler {
+  open: () => void;
+  close: () => void;
+  destroy: () => void;
+  ready: boolean;
+}
+
 /**
- * Represents an embedded login instance.
+ * Represents an embedded Link instance.
  */
-class EmbedLogin {
-  private iframe: HTMLIFrameElement;
-  private loader: HTMLDivElement;
+class OFAuthLinkEmbed {
   private loaded: boolean;
   private eventTarget: EventTarget;
+  private iframe: HTMLIFrameElement | null;
+  private overlay: HTMLElement | null;
+  private styleSheet: HTMLStyleElement | null;
+  private config: LinkConfig;
 
-  public constructor(iframe: HTMLIFrameElement, loader: HTMLDivElement) {
-    this.iframe = iframe;
-    this.loader = loader;
+  private constructor(config: LinkConfig) {
     this.loaded = false;
     this.eventTarget = new EventTarget();
+    this.iframe = null;
+    this.overlay = null;
+    this.styleSheet = null;
+    this.config = config;
+
     this.initWindowListener();
     this.addEventListener("loaded", this.loadedListener.bind(this));
     this.addEventListener("close", this.closeListener.bind(this));
@@ -28,140 +48,235 @@ class EmbedLogin {
   }
 
   /**
-   * Create a new embedded login instance by injecting an iframe into the DOM.
-   *
-   * @param url A Login Link.
-   * @param theme The theme of the embedded login. Defaults to `light`.
-
-   * @returns A promise that resolves to an instance of EmbedLogin.
-   * The promise resolves when the embedded login is fully loaded.
+   * Create a new embedded Link instance.
+   * This will pre-initialize the iframe but not display it until open() is called.
    */
-  public static async create(
-    url: string,
-    theme?: "light" | "dark",
-  ): Promise<EmbedLogin> {
-    const styleSheet = document.createElement("style");
-    styleSheet.innerText = `
-      .ofauth-loader-spinner {
-        width: 20px;
-        aspect-ratio: 1;
+  public static create(config: LinkConfig): Promise<LinkHandler> {
+    const embedLink = new OFAuthLinkEmbed(config);
+    return embedLink.initialize();
+  }
+
+  private async initialize(): Promise<LinkHandler> {
+    // Create and inject stylesheet
+    this.styleSheet = document.createElement("style");
+    this.styleSheet.innerText = `
+      ${Selectors.loader} .ofauth-loader-spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #fff;
+        border-bottom-color: transparent;
         border-radius: 50%;
-        background: ${theme === "dark" ? "#000" : "#fff"};
-        box-shadow: 0 0 0 0 ${theme === "dark" ? "#fff" : "#000"};
-        animation: ofauth-loader-spinner-animation 1s infinite;
+        display: inline-block;
+        box-sizing: border-box;
+        animation: ofauth-loader-spinner-animation 1s linear infinite;
       }
       @keyframes ofauth-loader-spinner-animation {
-        100% {box-shadow: 0 0 0 30px #0000}
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
       }
       body.ofauth-no-scroll {
         overflow: hidden;
       }
+      
+      ${Selectors.iframe} {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 400px;
+        height: 600px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        z-index: 2147483647;
+      }
+      ${Selectors.iframe}[data-theme="dark"] {
+        border-color: #404040;
+      }
+      
+      @media (prefers-color-scheme: dark) {
+        ${Selectors.iframe}:not([data-theme="light"]) {
+          border-color: #404040;
+        }
+      }
+
+      @media (prefers-color-scheme: light) {
+        ${Selectors.iframe}:not([data-theme="dark"]) {
+          border-color: #e0e0e0;
+        }
+      }
+
+      ${Selectors.loader} {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 2147483647;
+      }
+      
+      ${Selectors.overlay} {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.25);
+        z-index: 2147483646;
+      }
     `;
-    document.head.appendChild(styleSheet);
+    document.head.appendChild(this.styleSheet);
 
-    // Create loader
-    const loader = document.createElement("div");
-    loader.style.position = "absolute";
-    loader.style.top = "50%";
-    loader.style.left = "50%";
-    loader.style.transform = "translate(-50%, -50%)";
-    loader.style.zIndex = "2147483647";
-    loader.style.colorScheme = "auto";
-
-    // Create spinning icon
-    const spinner = document.createElement("div");
-    spinner.className = "ofauth-loader-spinner";
-    loader.appendChild(spinner);
-
-    // Insert into the DOM
-    document.body.classList.add("ofauth-no-scroll");
-    document.body.appendChild(loader);
-
-    // Add query parameters to the Login Link
-    const parsedURL = new URL(url);
+    // Create and prepare iframe but don't display it yet
+    const parsedURL = new URL(this.config.url);
     parsedURL.searchParams.set("embed", "true");
     parsedURL.searchParams.set("embed_origin", window.location.origin);
-    if (theme) {
-      parsedURL.searchParams.set("theme", theme);
+    if (this.config.theme) {
+      parsedURL.searchParams.set("theme", this.config.theme);
     }
-    const embedURL = parsedURL.toString();
-    
-    // Create iframe
-    const iframe = document.createElement("iframe");
-    iframe.src = embedURL;
-    iframe.style.position = "fixed";
-    iframe.style.top = "0";
-    iframe.style.left = "0";
-    iframe.style.width = "100%";
-    iframe.style.height = "100%";
-    iframe.style.border = "none";
-    iframe.style.zIndex = "2147483647";
-    iframe.style.backgroundColor = "rgba(0, 0, 0, 0.2)";
-    iframe.style.colorScheme = "auto";
-    document.body.appendChild(iframe);
-    
-    const embedLogin = new EmbedLogin(iframe, loader);
+
+    this.iframe = document.createElement("iframe");
+    this.iframe.src = parsedURL.toString();
+    this.iframe.id = Selectors.iframe.replace("#", "");
+    this.iframe.style.display = "none";
+    this.iframe.setAttribute("data-theme", this.config.theme || "auto");
+
+    // Create overlay but don't display it yet
+    this.overlay = document.createElement("div");
+    this.overlay.id = Selectors.overlay.replace("#", "");
+    this.overlay.style.display = "none";
+
+    document.body.appendChild(this.iframe);
+    document.body.appendChild(this.overlay);
+
     return new Promise((resolve) => {
-      embedLogin.addEventListener("loaded", () => resolve(embedLogin), {
-        once: true,
-      });
+      this.addEventListener("loaded", () => {
+        if (this.config.onLoad) {
+          this.config.onLoad();
+        }
+
+        resolve({
+          open: this.open.bind(this),
+          close: this.close.bind(this),
+          destroy: this.destroy.bind(this),
+          ready: true
+        });
+      }, { once: true });
     });
   }
 
+  private open(): void {
+    if (this.iframe && this.overlay) {
+      document.body.classList.add("ofauth-no-scroll");
+      this.iframe.style.display = "block";
+      this.overlay.style.display = "block";
+    }
+  }
+
+  private destroy(): void {
+    this.close();
+    if (this.styleSheet) {
+      document.head.removeChild(this.styleSheet);
+    }
+    // Clean up event listeners
+    this.eventTarget = new EventTarget();
+  }
+
+  // Update success listener to use config callback
+  private successListener(event: CustomEvent<EmbedLinkMessageSuccess>): void {
+    if (event.defaultPrevented) {
+      return;
+    }
+
+    if (this.config.onSuccess) {
+      this.config.onSuccess(event.detail);
+    }
+
+    if (event.detail.redirect) {
+      window.location.href = event.detail.successURL;
+    }
+  }
+
+  // Update close listener to use config callback
+  private closeListener(event: CustomEvent<EmbedLinkMessageClose>): void {
+    if (event.defaultPrevented) {
+      return;
+    }
+
+    this.close();
+
+    if (this.config.onClose) {
+      this.config.onClose();
+    }
+  }
+
   /**
-   * Initialize embedded login triggers.
+   * Initialize embedded Link triggers.
    *
-   * This method will add a click event listener to all elements with the `data-ofauth-login` attribute.
-   * The Login Link is either the `href` attribute for a link element or the value of `data-ofauth-login` attribute.
+   * This method will add a click event listener to all elements with the `data-ofauth-link` attribute.
+   * The Link client session URL is either the `href` attribute for a link element or the value of `data-ofauth-link` attribute.
    *
-   * The theme can be optionally set using the `data-ofauth-login-theme` attribute.
+   * The theme can be optionally set using the `data-ofauth-theme` attribute.
    *
    * @example
    * ```html
-   * <a href="https://auth.ofauth.com/s/xxxxxxxx" data-ofauth-login data-ofauth-login-theme="dark">Login</a>
+   * <a href="https://auth.ofauth.com/s/xxxxxxxx" data-ofauth-link data-ofauth-theme="dark">Link</a>
    * ```
    */
   public static init(): void {
-    const loginElements = document.querySelectorAll("[data-ofauth-login]");
-    loginElements.forEach((loginElement) => {
-      loginElement.removeEventListener(
+    const LinkElements = document.querySelectorAll("[data-ofauth-link]");
+    LinkElements.forEach((LinkElement) => {
+      LinkElement.removeEventListener(
         "click",
-        EmbedLogin.loginElementClickHandler,
+        OFAuthLinkEmbed.elementClickHandler,
       );
-      loginElement.addEventListener(
+      LinkElement.addEventListener(
         "click",
-        EmbedLogin.loginElementClickHandler,
+        OFAuthLinkEmbed.elementClickHandler,
       );
     });
   }
 
   /**
-   * Close the embedded login.
+   * Close the embedded Link.
    */
   public close(): void {
-    document.body.removeChild(this.iframe);
+    // Remove both iframe and overlay
+    // check if iframe exists
+    const iframe = document.getElementById(Selectors.iframe.replace("#", ""));
+    if (iframe) {
+      document.body.removeChild(iframe);
+    }
+    const overlay = document.getElementById(Selectors.overlay.replace("#", ""));
+    if (overlay) {
+      document.body.removeChild(overlay);
+    }
     document.body.classList.remove("ofauth-no-scroll");
+    this.loaded = false;
   }
 
   /**
-   * Add an event listener to the embedded login events.
+   * Add an event listener to the embedded Link events.
    *
    * @param type
    * @param listener
    */
   public addEventListener(
     type: "loaded",
-    listener: (event: CustomEvent<EmbedLoginMessageLoaded>) => void,
+    listener: (event: CustomEvent<EmbedLinkMessageLoaded>) => void,
     options?: AddEventListenerOptions | boolean,
   ): void;
   public addEventListener(
     type: "close",
-    listener: (event: CustomEvent<EmbedLoginMessageClose>) => void,
+    listener: (event: CustomEvent<EmbedLinkMessageClose>) => void,
     options?: AddEventListenerOptions | boolean,
   ): void;
   public addEventListener(
     type: "success",
-    listener: (event: CustomEvent<EmbedLoginMessageSuccess>) => void,
+    listener: (event: CustomEvent<EmbedLinkMessageSuccess>) => void,
     options?: AddEventListenerOptions | boolean,
   ): void;
   public addEventListener(
@@ -173,83 +288,58 @@ class EmbedLogin {
   }
 
   /**
-   * Remove an event listener from the embedded login events.
+   * Remove an event listener from the embedded Link events.
    *
    * @param type
    * @param listener
    */
   public removeEventListener(
     type: "loaded",
-    listener: (event: CustomEvent<EmbedLoginMessageLoaded>) => void,
+    listener: (event: CustomEvent<EmbedLinkMessageLoaded>) => void,
   ): void;
   public removeEventListener(
     type: "close",
-    listener: (event: CustomEvent<EmbedLoginMessageClose>) => void,
+    listener: (event: CustomEvent<EmbedLinkMessageClose>) => void,
   ): void;
   public removeEventListener(
     type: "success",
-    listener: (event: CustomEvent<EmbedLoginMessageSuccess>) => void,
+    listener: (event: CustomEvent<EmbedLinkMessageSuccess>) => void,
   ): void;
   public removeEventListener(type: string, listener: any): void {
     this.eventTarget.removeEventListener(type, listener);
   }
 
-  private static async loginElementClickHandler(e: Event) {
+  private static async elementClickHandler(e: Event) {
     e.preventDefault();
-    const loginElement = e.target as HTMLElement;
-    const url = loginElement.getAttribute("href") ||
-      (loginElement.getAttribute("data-ofauth-login") as string);
-    const theme = loginElement.getAttribute("data-ofauth-login-theme") as
+    const LinkElement = e.target as HTMLElement;
+    const url = LinkElement.getAttribute("href") ||
+      (LinkElement.getAttribute("data-ofauth-link") as string);
+    const theme = LinkElement.getAttribute("data-ofauth-theme") as
       | "light"
       | "dark"
       | undefined;
-    EmbedLogin.create(url, theme);
+    OFAuthLinkEmbed.create({ url, theme });
   }
-
+  
   /**
-   * Default listener for the `loaded` event.
+   * Default listener for the `load` event.
    *
-   * This listener will remove the loader spinner when the embedded login is fully loaded.
+   * This listener will remove the loader spinner when the embedded Link is fully loaded.
    */
-  private loadedListener(event: CustomEvent<EmbedLoginMessageLoaded>): void {
+  private loadedListener(event: CustomEvent<EmbedLinkMessageLoaded>): void {
     if (event.defaultPrevented || this.loaded) {
       return;
     }
-    document.body.removeChild(this.loader);
+    const loader = document.getElementById("ofauth-loader");
+    if (loader) {
+      document.body.removeChild(loader);
+    }
     this.loaded = true;
   }
 
   /**
-   * Default listener for the `close` event.
-   *
-   * This listener will call the `close` method to remove the embedded login from the DOM.
-   */
-  private closeListener(event: CustomEvent<EmbedLoginMessageClose>): void {
-    if (event.defaultPrevented) {
-      return;
-    }
-    this.close();
-  }
-
-  /**
-   * Default listener for the `success` event.
-   *
-   * This listener will redirect the parent window to the `successURL` if `redirect` is set to `true`.
-   */
-  private successListener(
-    event: CustomEvent<EmbedLoginMessageSuccess>,
-  ): void {
-    if (event.defaultPrevented) {
-      return;
-    }
-    if (event.detail.redirect) {
-      window.location.href = event.detail.successURL;
-    }
-  }
-
-  /**
-   * Initialize the window message listener to receive messages from the embedded login
-   * and re-dispatch them as events for the embedded login instance.
+   * Initialize the window message listener to receive messages from the embedded Link
+   * and re-dispatch them as events for the embedded Link instance.
    */
   private initWindowListener(): void {
     window.addEventListener("message", ({ data, origin }) => {
@@ -258,7 +348,7 @@ class EmbedLogin {
       ) {
         return;
       }
-      if (!isEmbedLoginMessage(data)) {
+      if (!isEmbedLinkMessage(data)) {
         return;
       }
       this.eventTarget.dispatchEvent(
@@ -268,27 +358,103 @@ class EmbedLogin {
   }
 }
 
+class LinkComponent extends HTMLElement {
+  private embedLinkHandler: LinkHandler | null = null;
+  private button: HTMLButtonElement;
+
+  constructor() {
+    super();
+    this.attachShadow({ mode: 'open' });
+
+    // Create a style element for default styles
+    const style = document.createElement('style');
+    style.textContent = `
+      .ofauth-link-button {
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        border: none;
+        border-radius: 5px;
+        background-color: #007bff;
+        color: #fff;
+        transition: background-color 0.3s;
+      }
+      .ofauth-link-button:hover {
+        background-color: #0056b3;
+      }
+    `;
+
+    // Create a button element
+    this.button = document.createElement('button');
+    this.button.className = 'ofauth-link-button';
+    this.button.setAttribute('part', 'button');
+
+    // Append style and button to shadow DOM
+    this.shadowRoot?.appendChild(style);
+    this.shadowRoot?.appendChild(this.button);
+
+    // Add click event to button
+    this.button.addEventListener('click', () => this.handleButtonClick());
+  }
+
+  connectedCallback() {
+    // Use either the label attribute or slot content
+    const label = this.getAttribute('label');
+    this.button.textContent = label || this.textContent || 'Link';
+  }
+
+  disconnectedCallback() {
+    if (this.embedLinkHandler) {
+      this.embedLinkHandler.destroy();
+      this.embedLinkHandler = null;
+    }
+  }
+
+  private async handleButtonClick() {
+    const url = this.getAttribute('url');
+    const theme = this.getAttribute('theme') as "light" | "dark" | undefined;
+
+    if (url) {
+      if (!this.embedLinkHandler) {
+        this.embedLinkHandler = await OFAuthLinkEmbed.create({
+          url,
+          theme,
+          onSuccess: (data) => {
+            this.dispatchEvent(new CustomEvent('success', { detail: data }));
+          },
+          onClose: () => {
+            this.dispatchEvent(new CustomEvent('exit'));
+          }
+        });
+      }
+
+      this.embedLinkHandler.open();
+    }
+  }
+}
+
+customElements.define('ofauth-link', LinkComponent);
+
+
 declare global {
   interface Window {
     OFAuth: {
-      EmbedLogin: typeof EmbedLogin;
+      LinkEmbed: typeof OFAuthLinkEmbed;
     };
   }
 }
 
 if (typeof window !== "undefined") {
-  window.OFAuth = {
-    EmbedLogin,
-  };
+  window.OFAuth = { LinkEmbed: OFAuthLinkEmbed };
 }
 
 if (typeof document !== "undefined") {
   const currentScript = document.currentScript as HTMLScriptElement | null;
   if (currentScript && currentScript.hasAttribute("data-auto-init")) {
     document.addEventListener("DOMContentLoaded", async () => {
-      EmbedLogin.init();
+      window.OFAuth.LinkEmbed.init();
     });
   }
 }
 
-export { EmbedLogin as OFAuthEmbedLogin };
+export { LinkComponent, OFAuthLinkEmbed };

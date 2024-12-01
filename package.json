@@ -1,13 +1,16 @@
 {
-	"name": "@ofauth/login-embed",
-	"version": "1.0.2",
+	"name": "@ofauth/link-embed",
+	"version": "1.0.0",
 	"type": "module",
 	"author": "OFAuth",
-	"description": "Login Embed for OFAuth",
+	"description": "Embed OFAuth Link on your website",
 	"scripts": {
 		"dev": "tsup --watch",
 		"build": "tsup --minify terser --sourcemap",
-		"publish-new": "bun scripts/publish.js"
+		"changeset": "changeset",
+		"version": "changeset version",
+		"release": "changeset publish",
+		"publish:jsr": "jsr publish"
 	},
 	"exports": {
 		".": {
@@ -16,6 +19,7 @@
 		}
 	},
 	"devDependencies": {
+		"@changesets/cli": "^2.27.1",
 		"terser": "^5.36.0",
 		"tsup": "^8.3.5",
 		"typescript": "latest"
@@ -29,5 +33,9 @@
 		"login",
 		"account",
 		"link"
-	]
+	],
+	"jsr": {
+		"name": "@ofauth/link-embed",
+		"version": "0.0.1"
+	}
 }

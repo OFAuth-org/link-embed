@@ -1,0 +1,6 @@
+{
+	"name": "@ofauth/link-embed",
+	"version": "0.1.0",
+	"license": "MIT",
+	"exports": "./src/embed.ts"
+}

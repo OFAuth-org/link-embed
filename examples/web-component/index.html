@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Embed Login Web Component Example</title>
+		
+		<script type="module" src="https://unpkg.com/@ofauth/link-embed/dist/embed.global.js"></script>
+		<style>
+			body {
+				font-family: Arial, sans-serif;
+				margin: 0;
+				padding: 20px;
+				background-color: #f4f4f9;
+			}
+			ofauth-link {
+				display: inline-block;
+				margin: 20px 0;
+			}
+			/* Example of overriding the default button style */
+			ofauth-link::part(button) {
+				background-color: #28a745;
+				color: #fff;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Embed Link Web Component Example</h1>
+		<p>
+			This example demonstrates how to use the OFAuth Link Embed web component.
+		</p>
+		
+		<ofauth-link
+			url="https://auth.ofauth.com/s/xxxxxxxx"
+			theme="dark"
+			label="Link Account"
+		/>
+
+		<p>Ensure that the URL is replaced with a valid login link.</p>
+	</body>
+</html>

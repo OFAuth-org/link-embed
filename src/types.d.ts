@@ -1,32 +1,32 @@
 /**
- * Message sent to the parent window when the embedded login is fully loaded.
+ * Message sent to the parent window when the embedded link is fully loaded.
  */
-export interface EmbedLoginMessageLoaded {
+export interface EmbedLinkMessageLoaded {
     event: "loaded";
 }
 
 /**
- * Message sent to the parent window when the embedded login needs to be closed.
+ * Message sent to the parent window when the embedded link needs to be closed.
  */
-export interface EmbedLoginMessageClose {
+export interface EmbedLinkMessageClose {
     event: "close";
 }
 
 /**
- * Message sent to the parent window when the login is successfully completed.
+ * Message sent to the parent window when the link is successfully completed.
  *
  * If `redirect` is set to `true`, the parent window should redirect to the `successURL`.
  */
-export interface EmbedLoginMessageSuccess {
+export interface EmbedLinkMessageSuccess {
     event: "success";
     successURL: string;
     redirect: boolean;
 }
 
 /**
- * Represents an embedded login message.
+ * Represents an embedded link message.
  */
-export type EmbedLoginMessage =
-    | EmbedLoginMessageLoaded
-    | EmbedLoginMessageClose
-    | EmbedLoginMessageSuccess;
+export type EmbedLinkMessage =
+    | EmbedLinkMessageLoaded
+    | EmbedLinkMessageClose
+    | EmbedLinkMessageSuccess;
