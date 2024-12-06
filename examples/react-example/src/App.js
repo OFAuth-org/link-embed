@@ -9,7 +9,7 @@ function App() {
 	useEffect(() => {
 		const createHandler = async () => {
 			const linkHandler = await OFAuthLinkEmbed.create({
-				url: "https://auth.ofauth.com/s/xxxxxxxx", // Replace with your actual session URL
+				url: "https://auth.ofauth.com/s/xxxxxxxx", // Replace with your actual client session URL from /init
 				theme: "dark",
 				onLoad: () => {
 					console.log("Link embed ready")
@@ -40,7 +40,18 @@ function App() {
 		<div className="App">
 			<header className="App-header">
 				<h1>OFAuth Link Embed Example</h1>
-				<button onClick={() => handler?.open()} disabled={!handler?.ready}>
+				<button
+					onClick={() => handler?.open()}
+					disabled={!handler}
+					style={{
+						padding: "10px 20px",
+						fontSize: "16px",
+						borderRadius: "8px",
+						backgroundColor: "#007bff",
+						color: "#fff",
+						border: "none",
+						cursor: "pointer",
+					}}>
 					Login with OFAuth
 				</button>
 				<p>Click the button above to authenticate with OFAuth</p>

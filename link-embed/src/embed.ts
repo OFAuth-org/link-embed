@@ -30,6 +30,7 @@ class OFAuthLinkEmbed {
   private eventTarget: EventTarget;
   private iframe: HTMLIFrameElement | null;
   private overlay: HTMLElement | null;
+  private loader: HTMLElement | null;
   private styleSheet: HTMLStyleElement | null;
   private config: LinkConfig;
 
@@ -38,9 +39,9 @@ class OFAuthLinkEmbed {
     this.eventTarget = new EventTarget();
     this.iframe = null;
     this.overlay = null;
+    this.loader = null;
     this.styleSheet = null;
     this.config = config;
-
     this.initWindowListener();
     this.addEventListener("loaded", this.loadedListener.bind(this));
     this.addEventListener("close", this.closeListener.bind(this));
@@ -51,13 +52,12 @@ class OFAuthLinkEmbed {
    * Create a new embedded Link instance.
    * This will pre-initialize the iframe but not display it until open() is called.
    */
-  public static create(config: LinkConfig): Promise<LinkHandler> {
-    console.log("create", config)
+  public static create(config: LinkConfig): LinkHandler {
     const embedLink = new OFAuthLinkEmbed(config);
     return embedLink.initialize();
   }
 
-  private async initialize(): Promise<LinkHandler> {
+  private initialize(): LinkHandler {
     // Create and inject stylesheet
     this.styleSheet = document.createElement("style");
     this.styleSheet.innerText = `
@@ -117,6 +117,8 @@ class OFAuthLinkEmbed {
         left: 50%;
         transform: translate(-50%, -50%);
         z-index: 2147483647;
+        width: 40px;
+        height: 40px;
       }
       
       ${Selectors.overlay} {
@@ -138,58 +140,108 @@ class OFAuthLinkEmbed {
     if (this.config.theme) {
       parsedURL.searchParams.set("theme", this.config.theme);
     }
+    this.config.url = parsedURL.toString();
 
-    this.iframe = document.createElement("iframe");
-    this.iframe.src = parsedURL.toString();
-    this.iframe.id = Selectors.iframe.replace("#", "");
-    this.iframe.style.display = "none";
-    this.iframe.setAttribute("data-theme", this.config.theme || "auto");
+    if (!this.iframe) {
+      // look for existing iframe
+      this.iframe = document.querySelector(Selectors.iframe);
+    }
 
-    // Create overlay but don't display it yet
-    this.overlay = document.createElement("div");
-    this.overlay.id = Selectors.overlay.replace("#", "");
-    this.overlay.style.display = "none";
+    if (!this.iframe) {
+      this.iframe = document.createElement("iframe");
+      this.iframe.src = this.config.url;
+      this.iframe.id = Selectors.iframe.replace("#", "");
+      this.iframe.style.display = "none";
+      this.iframe.setAttribute("data-theme", this.config.theme || "auto");
+    }
 
-    document.body.appendChild(this.iframe);
-    document.body.appendChild(this.overlay);
+    if (!this.overlay) {
+      // look for existing overlay
+      this.overlay = document.querySelector(Selectors.overlay);
+    }
 
-    this.iframe.addEventListener("load", () => {
-      this.eventTarget.dispatchEvent(new CustomEvent("loaded", { detail: {} }));
-      if (this.config.onLoad) {
-        this.config.onLoad();
-      }
-      this.loaded = true;
-    });
+    if (!this.overlay) {
+      // Create overlay but don't display it yet
+      this.overlay = document.createElement("div");
+      this.overlay.id = Selectors.overlay.replace("#", "");
+      this.overlay.style.display = "none";
+    }
 
+    // document.body.appendChild(this.iframe);
+    // document.body.appendChild(this.overlay);
 
-    return new Promise((resolve) => {
-      this.addEventListener("loaded", () => {
-        if (this.config.onLoad) {
-          this.config.onLoad();
-        }
+    return {
+      open: this.open.bind(this),
+      close: this.close.bind(this),
+      destroy: this.destroy.bind(this),
+      ready: this.loaded
+    };
+  }
 
-        resolve({
-          open: this.open.bind(this),
-          close: this.close.bind(this),
-          destroy: this.destroy.bind(this),
-          ready: true
-        });
-      }, { once: true });
-    });
+  private createLoader(): void {
+    if (this.loader) {
+      return;
+    }
+    this.loader = document.createElement("div");
+    this.loader.id = Selectors.loader.replace("#", "");
+
+    // add spinner
+    const spinner = document.createElement("div");
+    spinner.className = "ofauth-loader-spinner";
+    this.loader.appendChild(spinner);
+
+    document.body.appendChild(this.loader);
   }
 
   private open(): void {
     if (this.iframe && this.overlay) {
+      // Reset loaded state when opening
+      this.loaded = false;
+
+      // Reload the iframe content
+      this.iframe.style.display = "none";
+      this.overlay.style.display = "none";
+
+
+      // show loader
       document.body.classList.add("ofauth-no-scroll");
-      this.iframe.style.display = "block";
-      this.overlay.style.display = "block";
+      this.createLoader();
+
+      this.iframe.src = this.config.url;
+
+      document.body.appendChild(this.iframe);
+      document.body.appendChild(this.overlay);
+
+      // wait for the iframe to load
+      this.iframe.addEventListener("load", () => {
+        if (this.iframe) {
+          this.iframe.style.display = "block";
+        }
+        if (this.overlay) {
+          this.overlay.style.display = "block";
+        }
+        // remove loader
+        if (this.loader) {
+          document.body.removeChild(this.loader);
+          this.loader = null;
+        }
+      }, { once: true });
     }
   }
 
   private destroy(): void {
-    this.close();
+    // Remove both iframe and overlay
+    if (this.iframe) {
+      document.body.removeChild(this.iframe);
+      this.iframe = null;
+    }
+    if (this.overlay) {
+      document.body.removeChild(this.overlay);
+      this.overlay = null;
+    }
     if (this.styleSheet) {
       document.head.removeChild(this.styleSheet);
+      this.styleSheet = null;
     }
     // Clean up event listeners
     this.eventTarget = new EventTarget();
@@ -254,18 +306,21 @@ class OFAuthLinkEmbed {
    * Close the embedded Link.
    */
   public close(): void {
-    // Remove both iframe and overlay
-    // check if iframe exists
-    const iframe = document.getElementById(Selectors.iframe.replace("#", ""));
-    if (iframe) {
-      document.body.removeChild(iframe);
+    if (this.iframe && this.overlay) {
+      this.iframe.style.display = "none";
+      this.overlay.style.display = "none";
+      document.body.classList.remove("ofauth-no-scroll");
+      try {
+        document.body.removeChild(this.overlay);
+      } catch {
+      }
+      try {
+        document.body.removeChild(this.iframe);
+      } catch {
+      }
+      // Reset loaded state when closing
+      this.loaded = false;
     }
-    const overlay = document.getElementById(Selectors.overlay.replace("#", ""));
-    if (overlay) {
-      document.body.removeChild(overlay);
-    }
-    document.body.classList.remove("ofauth-no-scroll");
-    this.loaded = false;
   }
 
   /**
@@ -345,6 +400,9 @@ class OFAuthLinkEmbed {
       document.body.removeChild(loader);
     }
     this.loaded = true;
+    if (this.config.onLoad) {
+      this.config.onLoad();
+    }
   }
 
   /**
@@ -353,6 +411,7 @@ class OFAuthLinkEmbed {
    */
   private initWindowListener(): void {
     window.addEventListener("message", ({ data, origin }) => {
+      console.log("message", data, origin);
       if (
         !["https://auth.ofauth.com"].includes(origin)
       ) {
@@ -361,8 +420,9 @@ class OFAuthLinkEmbed {
       if (!isEmbedLinkMessage(data)) {
         return;
       }
+
       this.eventTarget.dispatchEvent(
-        new CustomEvent(data.event, { detail: data, cancelable: true }),
+        new CustomEvent(data.event, { detail: data, cancelable: true })
       );
     });
   }
