@@ -80,12 +80,6 @@ The `create()` method returns a Promise that resolves to a handler object with t
 ### 2. Using the global script
 
 ```html
-<!-- These are equivalent -->
-<ofauth-link
-	url="https://auth.ofauth.com/s/xxxxxxxxx"
-	theme="dark"
-	label="Login with OFAuth" />
-<!-- OR -->
 <a
 	data-ofauth-link
 	href="https://auth.ofauth.com/s/xxxxxxxxx"
@@ -93,7 +87,7 @@ The `create()` method returns a Promise that resolves to a handler object with t
 	>Login with OFAuth</a
 >
 
-<!-- Either way, you'll need to initialize the embed -->
+<!-- Initialize the embed -->
 <script
 	src="https://unpkg.com/@ofauth/link-embed/dist/embed.global.js"
 	defer
@@ -116,6 +110,21 @@ The `create()` method returns a Promise that resolves to a handler object with t
 			}
 		})
 </script>
+```
+
+To import the Web Component:
+
+```ts
+import { LinkComponent } from "@ofauth/link-embed/component"
+```
+
+Usage:
+
+```html
+<ofauth-link
+	url="https://auth.ofauth.com/s/xxxxxxxxx"
+	theme="dark"
+	label="Login with OFAuth" />
 ```
 
 > [!TIP]

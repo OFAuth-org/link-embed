@@ -15,7 +15,13 @@
 	"exports": {
 		".": {
 			"types": "./dist/embed.d.ts",
-			"default": "./dist/embed.js"
+			"require": "./dist/embed.cjs",
+			"import": "./dist/embed.js"
+		},
+		"./component": {
+			"types": "./dist/component.d.ts",
+			"require": "./dist/component.cjs",
+			"import": "./dist/component.js"
 		}
 	},
 	"types": "./dist/embed.d.ts",

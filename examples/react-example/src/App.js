@@ -1,4 +1,5 @@
 import { OFAuthLinkEmbed } from "@ofauth/link-embed"
+
 import "./App.css"
 import { useEffect, useState } from "react"
 
@@ -8,7 +9,7 @@ function App() {
 	useEffect(() => {
 		const createHandler = async () => {
 			const linkHandler = await OFAuthLinkEmbed.create({
-				url: "https://auth.ofauth.com/s/dpvv211fnfmuqi5l23x8xsbq4btmw0n6", // Replace with your actual session URL
+				url: "https://auth.ofauth.com/s/xxxxxxxx", // Replace with your actual session URL
 				theme: "dark",
 				onLoad: () => {
 					console.log("Link embed ready")
@@ -38,11 +39,11 @@ function App() {
 	return (
 		<div className="App">
 			<header className="App-header">
-				<h1>OnlyFans Auth Link Embed Example</h1>
+				<h1>OFAuth Link Embed Example</h1>
 				<button onClick={() => handler?.open()} disabled={!handler?.ready}>
 					Login with OFAuth
 				</button>
-				<p>Click the button above to authenticate with OnlyFans</p>
+				<p>Click the button above to authenticate with OFAuth</p>
 			</header>
 		</div>
 	)
