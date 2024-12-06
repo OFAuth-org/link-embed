@@ -1,41 +1,19 @@
 {
-	"name": "@ofauth/link-embed",
-	"version": "2.0.0",
-	"type": "module",
-	"author": "OFAuth",
-	"description": "Embed OFAuth Link on your website",
+	"name": "@ofauth/link-embed-root",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
 	"scripts": {
-		"dev": "tsup --watch",
-		"build": "tsup --minify terser --sourcemap",
 		"changeset": "changeset",
 		"version": "changeset version",
 		"release": "changeset publish",
 		"publish:jsr": "jsr publish"
 	},
-	"exports": {
-		".": {
-			"types": "./dist/embed.d.ts",
-			"default": "./dist/embed.js"
-		}
-	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"private": true,
 	"devDependencies": {
-		"@changesets/cli": "^2.27.1",
-		"terser": "^5.36.0",
-		"tsup": "^8.3.5",
-		"typescript": "latest"
-	},
-	"publishConfig": {
-		"access": "public"
-	},
-	"keywords": [
-		"ofauth",
-		"onlyfans",
-		"login",
-		"account",
-		"link"
-	],
-	"jsr": {
-		"name": "@ofauth/link-embed",
-		"version": "0.0.1"
+		"@changesets/cli": "^2.27.1"
 	}
 }

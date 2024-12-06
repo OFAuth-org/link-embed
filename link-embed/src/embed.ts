@@ -52,6 +52,7 @@ class OFAuthLinkEmbed {
    * This will pre-initialize the iframe but not display it until open() is called.
    */
   public static create(config: LinkConfig): Promise<LinkHandler> {
+    console.log("create", config)
     const embedLink = new OFAuthLinkEmbed(config);
     return embedLink.initialize();
   }
@@ -152,12 +153,24 @@ class OFAuthLinkEmbed {
     document.body.appendChild(this.iframe);
     document.body.appendChild(this.overlay);
 
+    this.iframe.addEventListener("load", () => {
+      this.eventTarget.dispatchEvent(new CustomEvent("loaded", { detail: {} }));
+      if (this.config.onLoad) {
+        this.config.onLoad();
+      }
+      this.loaded = true;
+    });
+    
+    console.log("iframe", this.iframe)
+    console.log("overlay", this.overlay)
+    
     return new Promise((resolve) => {
       this.addEventListener("loaded", () => {
+        console.log("loaded")
         if (this.config.onLoad) {
           this.config.onLoad();
         }
-
+        
         resolve({
           open: this.open.bind(this),
           close: this.close.bind(this),
@@ -320,7 +333,7 @@ class OFAuthLinkEmbed {
       | undefined;
     OFAuthLinkEmbed.create({ url, theme });
   }
-  
+
   /**
    * Default listener for the `load` event.
    *

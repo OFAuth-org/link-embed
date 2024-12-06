@@ -10,13 +10,13 @@
 
 <script lang="ts">
 	import { onMount } from "svelte"
-	import { OFAuthLinkEmbed, type LinkHandler } from "../../../src/embed.ts"
+	import { OFAuthLinkEmbed, type LinkHandler } from "../../../link-embed/src/embed.ts"
 	// or
 	// import { OFAuthLinkEmbed, type LinkHandler } from "@ofauth/link-embed"
 
 	let loginButton
 
-	let url = "https://auth.ofauth.com/s/demo"
+	let url = "https://auth.ofauth.com/s/dpvv211fnfmuqi5l23x8xsbq4btmw0n6"
 
 	let handler: LinkHandler
 
@@ -28,9 +28,19 @@
 		handler = await OFAuthLinkEmbed.create({
 			url,
 			theme: "light",
+			onLoad: () => {
+				console.log("ready")
+			},
+			onSuccess: (data) => {
+				console.log("success", data)
+			},
+			onClose: () => {
+				console.log("closed")
+			},
 		})
 		// handler has { open: () => void, close: () => void, destroy: () => void, ready: boolean }
 		// ready is true when the iframe is fully loaded
+		// console.log(handler)
 	})
 </script>
 
@@ -61,7 +71,7 @@
 
 		<div class="examples">
 			<h2>Using the LinkHandler</h2>
-			<button on:click={handler.open}>Open Link</button>
+			<button on:click={() => handler.open()}>Open Link</button>
 		</div>
 	</div>
 </main>
