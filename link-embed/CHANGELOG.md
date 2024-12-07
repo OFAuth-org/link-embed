@@ -1,5 +1,12 @@
 # @ofauth/link-embed
 
+## 2.0.4
+
+### Patch Changes
+
+- 18c3d12: fix: exit -> close event on web component
+- 53ef448: fix: webcomponent event propogation
+
 ## 2.0.3
 
 ### Patch Changes
