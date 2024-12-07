@@ -1,5 +1,11 @@
 # @ofauth/link-embed
 
+## 2.0.5
+
+### Patch Changes
+
+- bbc99b1: fix: check for invalid url
+
 ## 2.0.4
 
 ### Patch Changes
