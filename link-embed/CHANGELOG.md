@@ -1,5 +1,12 @@
 # @ofauth/link-embed
 
+## 2.0.3
+
+### Patch Changes
+
+- 551061b: fix: allow reopening embed, load iframe on open not init
+- ab76555: fix: don't output sourcemap
+
 ## 2.0.2
 
 ### Patch Changes
