@@ -4,8 +4,7 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Embed Login Web Component Example</title>
-		
-		<script type="module" src="https://unpkg.com/@ofauth/link-embed/dist/embed.global.js"></script>
+
 		<style>
 			body {
 				font-family: Arial, sans-serif;
@@ -29,13 +28,22 @@
 		<p>
 			This example demonstrates how to use the OFAuth Link Embed web component.
 		</p>
-		
+
 		<ofauth-link
 			url="https://auth.ofauth.com/s/xxxxxxxx"
 			theme="dark"
-			label="Link Account"
-		/>
+			label="Link Account" />
 
 		<p>Ensure that the URL is replaced with a valid login link.</p>
 	</body>
+
+	<script
+		type="module"
+		src="https://unpkg.com/@ofauth/link-embed/dist/component.js"></script>
+	<script>
+		// attach an event listener to the ofauth-link component
+		document.querySelector("ofauth-link").addEventListener("close", (event) => {
+			console.log("ofauth-link closed", event)
+		})
+	</script>
 </html>

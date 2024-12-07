@@ -73,9 +73,9 @@ The `create()` method returns a Promise that resolves to a handler object with t
 | Method      | Description                                                |
 | ----------- | ---------------------------------------------------------- |
 | `open()`    | Opens the Link embed modal                                 |
-| `exit()`    | Closes the Link embed modal                                |
+| `close()`   | Closes the Link embed modal                                |
 | `destroy()` | Cleans up the Link embed instance                          |
-| `ready`     | Boolean indicating if the Link embed is ready to be opened |
+| `ready`     | Boolean indicating if the Link embed is loaded to be displayed |
 
 ### 2. Using the global script
 
@@ -103,7 +103,8 @@ The `create()` method returns a Promise that resolves to a handler object with t
 To import the Web Component:
 
 ```ts
-import { LinkComponent } from "@ofauth/link-embed/component"
+import "@ofauth/link-embed/component"
+// or from: https://unpkg.com/@ofauth/link-embed/dist/component.js
 ```
 
 Usage:

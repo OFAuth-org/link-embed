@@ -62,10 +62,10 @@ class LinkComponent extends HTMLElement {
                     url,
                     theme,
                     onSuccess: (data) => {
-                        this.dispatchEvent(new CustomEvent('success', { detail: data }));
+                        this.dispatchEvent(new CustomEvent('success', { detail: data, composed: true }));
                     },
                     onClose: () => {
-                        this.dispatchEvent(new CustomEvent('close'));
+                        this.dispatchEvent(new CustomEvent('close', { composed: true }));
                     }
                 });
             }
