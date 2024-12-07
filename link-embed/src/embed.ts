@@ -134,14 +134,30 @@ class OFAuthLinkEmbed {
     document.head.appendChild(this.styleSheet);
 
     // Create and prepare iframe but don't display it yet
-    const parsedURL = new URL(this.config.url);
+    try {
+      var parsedURL = new URL(this.config.url);
+    } catch (error) {
+      console.error("Invalid URL: ", this.config.url, error);
+      return {
+        open: () => {
+          console.error("Invalid URL, please reinitialize with a valid URL: ", this.config.url);
+        },
+        close: () => {
+          console.error("Invalid URL, please reinitialize with a valid URL: ", this.config.url);
+        },
+        destroy: () => {
+          console.error("Invalid URL, please reinitialize with a valid URL: ", this.config.url);
+        },
+        ready: false
+      };
+    }
     parsedURL.searchParams.set("embed", "true");
     parsedURL.searchParams.set("embed_origin", window.location.origin);
     if (this.config.theme) {
       parsedURL.searchParams.set("theme", this.config.theme);
     }
     this.config.url = parsedURL.toString();
-
+   
     if (!this.iframe) {
       // look for existing iframe
       this.iframe = document.querySelector(Selectors.iframe);
@@ -189,7 +205,7 @@ class OFAuthLinkEmbed {
     const spinner = document.createElement("div");
     spinner.className = "ofauth-loader-spinner";
     this.loader.appendChild(spinner);
-
+    
     document.body.appendChild(this.loader);
   }
 

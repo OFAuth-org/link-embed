@@ -5,7 +5,7 @@ import { useEffect, useState } from "react"
 
 function App() {
 	const [handler, setHandler] = useState(null)
-
+	
 	useEffect(() => {
 		const createHandler = async () => {
 			const linkHandler = await OFAuthLinkEmbed.create({
@@ -25,7 +25,7 @@ function App() {
 			})
 			setHandler(linkHandler)
 		}
-
+		
 		createHandler()
 
 		// Cleanup on unmount
