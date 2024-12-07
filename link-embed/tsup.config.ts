@@ -1,11 +1,20 @@
 import { defineConfig } from 'tsup';
 
-export default defineConfig({
-  clean: true,
-  dts: false,
-  sourcemap: false,
-  treeshake: true,
-  splitting: true,
-  entry: ["src/embed.ts", "src/component.ts"],
-  format: ["cjs", "esm", "iife"]
-});
+export default defineConfig([
+  {
+    clean: true,
+    dts: true,
+    sourcemap: false,
+    treeshake: true,
+    splitting: false,
+    entry: ['src/embed.ts'],
+    format: ['cjs', 'esm', 'iife'],
+  },
+  {
+    sourcemap: false,
+    dts: true,
+    treeshake: true,
+    entry: ['src/component.ts'],
+    format: ['cjs', 'esm'],
+  },
+]);
