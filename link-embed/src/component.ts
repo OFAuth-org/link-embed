@@ -65,7 +65,7 @@ class LinkComponent extends HTMLElement {
                         this.dispatchEvent(new CustomEvent('success', { detail: data }));
                     },
                     onClose: () => {
-                        this.dispatchEvent(new CustomEvent('exit'));
+                        this.dispatchEvent(new CustomEvent('close'));
                     }
                 });
             }

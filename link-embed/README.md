@@ -98,18 +98,6 @@ The `create()` method returns a Promise that resolves to a handler object with t
 	import { OFAuthLinkEmbed } from "@ofauth/link-embed"
 	OFAuthLinkEmbed.init()
 </script>
-
-<script>
-	// listen for the success event
-	document
-		.getElementByTag("ofauth-link")
-		.addEventListener("success", (event) => {
-			// handle the success event, e.g. redirect to the successURL that was provided when the Link session was created
-			if (data.redirect) {
-				window.location.href = data.successURL
-			}
-		})
-</script>
 ```
 
 To import the Web Component:
@@ -125,6 +113,21 @@ Usage:
 	url="https://auth.ofauth.com/s/xxxxxxxxx"
 	theme="dark"
 	label="Login with OFAuth" />
+
+<script>
+	// listen for the success event
+	const link = document.getElementByTag("ofauth-link")
+	link.addEventListener("success", (event) => {
+		// handle the success event, e.g. redirect to the successURL that was provided when the Link session was created
+		if (data.redirect) {
+			window.location.href = data.successURL
+		}
+	})
+
+	link.addEventListener("close", (event) => {
+		console.log("Link closed")
+	})
+</script>
 ```
 
 > [!TIP]
@@ -144,7 +147,7 @@ Usage:
 | Event     | Detail            | Description                         |
 | --------- | ----------------- | ----------------------------------- |
 | `success` | Link success data | Fired on successful account linking |
-| `exit`    | None              | Fired when Link is closed           |
+| `close`   | None              | Fired when Link is closed           |
 
 ## Browser Support
 
