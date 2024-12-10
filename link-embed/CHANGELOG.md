@@ -1,5 +1,11 @@
 # @ofauth/link-embed
 
+## 2.0.6
+
+### Patch Changes
+
+- 09f2aa7: feat: get user data on success
+
 ## 2.0.5
 
 ### Patch Changes
