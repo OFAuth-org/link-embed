@@ -157,12 +157,12 @@ class OFAuthLinkEmbed {
       parsedURL.searchParams.set("theme", this.config.theme);
     }
     this.config.url = parsedURL.toString();
-   
+
     if (!this.iframe) {
       // look for existing iframe
       this.iframe = document.querySelector(Selectors.iframe);
     }
-
+    
     if (!this.iframe) {
       this.iframe = document.createElement("iframe");
       this.iframe.src = this.config.url;
@@ -185,7 +185,7 @@ class OFAuthLinkEmbed {
 
     // document.body.appendChild(this.iframe);
     // document.body.appendChild(this.overlay);
-
+    
     return {
       open: this.open.bind(this),
       close: this.close.bind(this),
@@ -205,7 +205,7 @@ class OFAuthLinkEmbed {
     const spinner = document.createElement("div");
     spinner.className = "ofauth-loader-spinner";
     this.loader.appendChild(spinner);
-    
+
     document.body.appendChild(this.loader);
   }
 
@@ -427,7 +427,6 @@ class OFAuthLinkEmbed {
    */
   private initWindowListener(): void {
     window.addEventListener("message", ({ data, origin }) => {
-      console.log("message", data, origin);
       if (
         !["https://auth.ofauth.com"].includes(origin)
       ) {

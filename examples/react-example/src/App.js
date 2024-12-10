@@ -5,16 +5,17 @@ import { useEffect, useState } from "react"
 
 function App() {
 	const [handler, setHandler] = useState(null)
-	
+
 	useEffect(() => {
 		const createHandler = async () => {
 			const linkHandler = await OFAuthLinkEmbed.create({
 				url: "https://auth.ofauth.com/s/xxxxxxxx", // Replace with your actual client session URL from /init
-				theme: "dark",
+				theme: "auto",
 				onLoad: () => {
 					console.log("Link embed ready")
 				},
 				onSuccess: (data) => {
+					console.log("Link embed success", data)
 					if (data.redirect) {
 						window.location.href = data.successURL
 					}
@@ -25,7 +26,7 @@ function App() {
 			})
 			setHandler(linkHandler)
 		}
-		
+
 		createHandler()
 
 		// Cleanup on unmount

@@ -104,6 +104,7 @@ To import the Web Component:
 
 ```ts
 import "@ofauth/link-embed/component"
+// or from: https://unpkg.com/@ofauth/link-embed/dist/component.js
 ```
 
 Usage:
@@ -122,6 +123,8 @@ Usage:
 		if (data.redirect) {
 			window.location.href = data.successURL
 		}
+
+		console.log(event.detail.user)
 	})
 
 	link.addEventListener("close", (event) => {

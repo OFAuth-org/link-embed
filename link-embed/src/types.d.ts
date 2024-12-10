@@ -21,6 +21,13 @@ export interface EmbedLinkMessageSuccess {
     event: "success";
     successURL: string;
     redirect: boolean;
+    user: {
+        name: string;
+        email: string;
+        avatar: string;
+        id: string;
+        username: string;
+    };
 }
 
 /**

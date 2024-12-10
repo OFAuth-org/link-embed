@@ -123,6 +123,8 @@ Usage:
 		if (data.redirect) {
 			window.location.href = data.successURL
 		}
+
+		console.log(event.detail.user)
 	})
 
 	link.addEventListener("close", (event) => {
