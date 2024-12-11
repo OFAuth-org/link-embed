@@ -1,5 +1,12 @@
 # @ofauth/link-embed
 
+## 2.0.8
+
+### Patch Changes
+
+- ae23c2c: feat: close embed on success event
+- 5a07775: fix: remove references to elements after removal
+
 ## 2.0.7
 
 ### Patch Changes
