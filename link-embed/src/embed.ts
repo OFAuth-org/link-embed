@@ -162,7 +162,7 @@ class OFAuthLinkEmbed {
       // look for existing iframe
       this.iframe = document.querySelector(Selectors.iframe);
     }
-    
+
     if (!this.iframe) {
       this.iframe = document.createElement("iframe");
       this.iframe.src = this.config.url;
@@ -185,7 +185,7 @@ class OFAuthLinkEmbed {
 
     // document.body.appendChild(this.iframe);
     // document.body.appendChild(this.overlay);
-    
+
     return {
       open: this.open.bind(this),
       close: this.close.bind(this),
@@ -238,7 +238,10 @@ class OFAuthLinkEmbed {
         }
         // remove loader
         if (this.loader) {
-          document.body.removeChild(this.loader);
+          try {
+            document.body.removeChild(this.loader);
+          } catch {
+          }
           this.loader = null;
         }
       }, { once: true });
@@ -248,15 +251,24 @@ class OFAuthLinkEmbed {
   private destroy(): void {
     // Remove both iframe and overlay
     if (this.iframe) {
-      document.body.removeChild(this.iframe);
+      try {
+        document.body.removeChild(this.iframe);
+      } catch {
+      }
       this.iframe = null;
     }
     if (this.overlay) {
-      document.body.removeChild(this.overlay);
+      try {
+        document.body.removeChild(this.overlay);
+      } catch {
+      }
       this.overlay = null;
     }
     if (this.styleSheet) {
-      document.head.removeChild(this.styleSheet);
+      try {
+        document.head.removeChild(this.styleSheet);
+      } catch {
+      }
       this.styleSheet = null;
     }
     // Clean up event listeners
@@ -413,7 +425,10 @@ class OFAuthLinkEmbed {
     }
     const loader = document.getElementById("ofauth-loader");
     if (loader) {
-      document.body.removeChild(loader);
+      try {
+        document.body.removeChild(loader);
+      } catch {
+      }
     }
     this.loaded = true;
     if (this.config.onLoad) {
