@@ -1,5 +1,11 @@
 # @ofauth/link-embed
 
+## 2.0.7
+
+### Patch Changes
+
+- 0781238: fix: ensure no error on dom element removal
+
 ## 2.0.6
 
 ### Patch Changes
