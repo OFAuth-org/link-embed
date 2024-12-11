@@ -271,6 +271,14 @@ class OFAuthLinkEmbed {
       }
       this.styleSheet = null;
     }
+
+    if (this.loader) {
+      try {
+        document.body.removeChild(this.loader);
+      } catch {
+      }
+      this.loader = null;
+    }
     // Clean up event listeners
     this.eventTarget = new EventTarget();
   }
@@ -342,10 +350,12 @@ class OFAuthLinkEmbed {
         document.body.removeChild(this.overlay);
       } catch {
       }
+      this.overlay = null;
       try {
         document.body.removeChild(this.iframe);
       } catch {
       }
+      this.iframe = null;
       // Reset loaded state when closing
       this.loaded = false;
     }
@@ -429,6 +439,7 @@ class OFAuthLinkEmbed {
         document.body.removeChild(loader);
       } catch {
       }
+      this.loader = null;
     }
     this.loaded = true;
     if (this.config.onLoad) {
