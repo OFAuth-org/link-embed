@@ -1,5 +1,12 @@
 # @ofauth/link-embed
 
+## 2.1.0
+
+### Minor Changes
+
+- 5337b31: standardized naming of object keys from Link Success Message, "successUrl"
+  Minor only change due to the fact that most people are not using both an embed and a redirect.
+
 ## 2.0.8
 
 ### Patch Changes
