@@ -15,15 +15,14 @@ export interface EmbedLinkMessageClose {
 /**
  * Message sent to the parent window when the link is successfully completed.
  *
- * If `redirect` is set to `true`, the parent window should redirect to the `successURL`.
+ * If `redirect` is set to `true`, the parent window should redirect to the `successUrl`.
  */
 export interface EmbedLinkMessageSuccess {
     event: "success";
-    successURL: string;
+    successUrl: string;
     redirect: boolean;
     user: {
         name: string;
-        email: string;
         avatar: string;
         id: string;
         username: string;

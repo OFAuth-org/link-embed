@@ -294,7 +294,7 @@ class OFAuthLinkEmbed {
     }
 
     if (event.detail.redirect) {
-      window.location.href = event.detail.successURL;
+      window.location.href = event.detail.successUrl;
     } else {
       this.destroy();
     }

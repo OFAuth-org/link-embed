@@ -17,7 +17,7 @@ function App() {
 				onSuccess: (data) => {
 					console.log("Link embed success", data)
 					if (data.redirect) {
-						window.location.href = data.successURL
+						window.location.href = data.successUrl
 					}
 				},
 				onClose: () => {

@@ -31,9 +31,9 @@ const handler: LinkHandler = await OFAuthLinkEmbed.create({
 		console.log("ready")
 	},
 	onSuccess: (data: EmbedLinkMessageSuccess) => {
-		// handle the success event, e.g. redirect to the successURL that was provided when the Link session was created
+		// handle the success event, e.g. redirect to the successUrl that was provided when the Link session was created
 		if (data.redirect) {
-			window.location.href = data.successURL
+			window.location.href = data.successUrl
 		}
 	},
 	onClose: () => {
@@ -119,9 +119,9 @@ Usage:
 	// listen for the success event
 	const link = document.getElementByTag("ofauth-link")
 	link.addEventListener("success", (event) => {
-		// handle the success event, e.g. redirect to the successURL that was provided when the Link session was created
+		// handle the success event, e.g. redirect to the successUrl that was provided when the Link session was created
 		if (data.redirect) {
-			window.location.href = data.successURL
+			window.location.href = data.successUrl
 		}
 
 		console.log(event.detail.user)
