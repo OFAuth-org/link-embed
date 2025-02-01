@@ -1,5 +1,11 @@
 # @ofauth/link-embed
 
+## 3.0.0
+
+### Major Changes
+
+- e60668e: changed base url to link.ofauth.com
+
 ## 2.1.0
 
 ### Minor Changes
