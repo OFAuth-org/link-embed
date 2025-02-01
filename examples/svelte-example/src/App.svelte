@@ -10,20 +10,23 @@
 
 <script lang="ts">
 	import { onMount } from "svelte"
-	import { OFAuthLinkEmbed, type LinkHandler } from "../../../link-embed/src/embed.ts"
+	import {
+		OFAuthLinkEmbed,
+		type LinkHandler,
+	} from "../../../link-embed/src/embed.ts"
 	// or
 	// import { OFAuthLinkEmbed, type LinkHandler } from "@ofauth/link-embed"
 
 	let loginButton
 
-	let url = "https://auth.ofauth.com/s/dpvv211fnfmuqi5l23x8xsbq4btmw0n6"
+	let url = "https://link.ofauth.com/s/cs_dpvv211fnfmuqi5l23x8xsbq4btmw0n6"
 
 	let handler: LinkHandler
 
 	onMount(async () => {
 		// 2: this initializes any element with the data-ofauth-link attribute
 		OFAuthLinkEmbed.init()
-		
+
 		// 3: create a login handler
 		handler = await OFAuthLinkEmbed.create({
 			url,

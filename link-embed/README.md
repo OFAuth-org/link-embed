@@ -25,7 +25,7 @@ import {
 
 // create a Link handler
 const handler: LinkHandler = await OFAuthLinkEmbed.create({
-	url: "https://auth.ofauth.com/s/xxxxxxxxx",
+	url: "https://link.ofauth.com/s/cs_xxxxxxxxx",
 	theme: "dark",
 	onLoad: () => {
 		console.log("ready")
@@ -70,11 +70,11 @@ The `create()` method accepts a configuration object with the following options:
 
 The `create()` method returns a Promise that resolves to a handler object with the following methods:
 
-| Method      | Description                                                |
-| ----------- | ---------------------------------------------------------- |
-| `open()`    | Opens the Link embed modal                                 |
-| `close()`   | Closes the Link embed modal                                |
-| `destroy()` | Cleans up the Link embed instance                          |
+| Method      | Description                                                    |
+| ----------- | -------------------------------------------------------------- |
+| `open()`    | Opens the Link embed modal                                     |
+| `close()`   | Closes the Link embed modal                                    |
+| `destroy()` | Cleans up the Link embed instance                              |
 | `ready`     | Boolean indicating if the Link embed is loaded to be displayed |
 
 ### 2. Using the global script
@@ -82,7 +82,7 @@ The `create()` method returns a Promise that resolves to a handler object with t
 ```html
 <a
 	data-ofauth-link
-	href="https://auth.ofauth.com/s/xxxxxxxxx"
+	href="https://link.ofauth.com/s/cs_xxxxxxxxx"
 	data-ofauth-theme="light"
 	>Login with OFAuth</a
 >
@@ -111,7 +111,7 @@ Usage:
 
 ```html
 <ofauth-link
-	url="https://auth.ofauth.com/s/xxxxxxxxx"
+	url="https://link.ofauth.com/s/cs_xxxxxxxxx"
 	theme="dark"
 	label="Login with OFAuth" />
 

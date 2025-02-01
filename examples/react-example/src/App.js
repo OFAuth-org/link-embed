@@ -9,7 +9,7 @@ function App() {
 	useEffect(() => {
 		const createHandler = async () => {
 			const linkHandler = await OFAuthLinkEmbed.create({
-				url: "https://auth.ofauth.com/s/xxxxxxxx", // Replace with your actual client session URL from /init
+				url: "https://link.ofauth.com/s/cs_xxxxxxxx", // Replace with your actual client session URL from /init
 				theme: "auto",
 				onLoad: () => {
 					console.log("Link embed ready")

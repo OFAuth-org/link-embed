@@ -305,7 +305,7 @@ class OFAuthLinkEmbed {
     if (event.defaultPrevented) {
       return;
     }
-    
+
     this.close();
 
     if (this.config.onClose) {
@@ -323,7 +323,7 @@ class OFAuthLinkEmbed {
    *
    * @example
    * ```html
-   * <a href="https://auth.ofauth.com/s/xxxxxxxx" data-ofauth-link data-ofauth-theme="dark">Link</a>
+   * <a href="https://link.ofauth.com/s/cs_xxxxxxxx" data-ofauth-link data-ofauth-theme="dark">Link</a>
    * ```
    */
   public static init(): void {
@@ -456,7 +456,7 @@ class OFAuthLinkEmbed {
   private initWindowListener(): void {
     window.addEventListener("message", ({ data, origin }) => {
       if (
-        !["https://auth.ofauth.com"].includes(origin)
+        !["https://link.ofauth.com"].includes(origin)
       ) {
         return;
       }
