@@ -10,16 +10,11 @@
 
 <script lang="ts">
 	import { onMount } from "svelte"
-	import {
-		OFAuthLinkEmbed,
-		type LinkHandler,
-	} from "../../../link-embed/src/embed.ts"
-	// or
-	// import { OFAuthLinkEmbed, type LinkHandler } from "@ofauth/link-embed"
-
+	import { OFAuthLinkEmbed, type LinkHandler } from "@ofauth/link-embed"
+	import { LinkComponent } from "@ofauth/link-embed/component"
 	let loginButton
 
-	let url = "https://link.ofauth.com/s/cs_dpvv211fnfmuqi5l23x8xsbq4btmw0n6"
+	let url = "https://link.ofauth.com/s/cs_snhhu1iesc6vquzk06qd6ixnrvdq"
 
 	let handler: LinkHandler
 
@@ -61,7 +56,12 @@
 
 		<div class="card">
 			<!-- Using the web component -->
-			<ofauth-link bind:this={loginButton} {url} label="Login with OFAuth" />
+			<ofauth-link
+				bind:this={loginButton}
+				{url}
+				label="Login with OFAuth"
+				theme="light"
+			></ofauth-link>
 		</div>
 
 		<div class="examples">
