@@ -11,7 +11,7 @@
 <script lang="ts">
 	import { onMount } from "svelte"
 	import { OFAuthLinkEmbed, type LinkHandler } from "@ofauth/link-embed"
-	import { LinkComponent } from "@ofauth/link-embed/component"
+	import { inherits } from "util"
 	let loginButton
 
 	let url = "https://link.ofauth.com/s/cs_snhhu1iesc6vquzk06qd6ixnrvdq"
@@ -23,22 +23,19 @@
 		OFAuthLinkEmbed.init()
 
 		// 3: create a login handler
-		handler = await OFAuthLinkEmbed.create({
+		handler = OFAuthLinkEmbed.create({
 			url,
-			theme: "light",
-			onLoad: () => {
-				console.log("ready")
-			},
+			theme: "auto",
 			onSuccess: (data) => {
 				console.log("success", data)
+				handler.destroy() // cleans up/removes the dom elements
 			},
 			onClose: () => {
 				console.log("closed")
-			},
+			}
 		})
 		// handler has { open: () => void, close: () => void, destroy: () => void, ready: boolean }
 		// ready is true when the iframe is fully loaded
-		// console.log(handler)
 	})
 </script>
 
@@ -55,7 +52,7 @@
 		</div>
 
 		<div class="card">
-			<!-- Using the web component -->
+			<!-- Using the web component (auto initialized via OFAuthLinkEmbed.init()) -->
 			<ofauth-link
 				bind:this={loginButton}
 				{url}
@@ -65,15 +62,15 @@
 		</div>
 
 		<div class="examples">
-			<h2>Alternative Implementation, using OFAuthLink.init()</h2>
-			<!-- Using data attributes approach -->
+			<h2>Alternative Implementation, using OFAuthLinkEmbed.init() and data-ofauth-link</h2>
+			<!-- Using data attributes approach and OFAuthLinkEmbed.init()-->
 			<a href={url} data-ofauth-link class="alt-login">
 				Login with data-attribute
 			</a>
 		</div>
 
 		<div class="examples">
-			<h2>Using the LinkHandler</h2>
+			<h2>Using the LinkHandler returned by OFAuthLinkEmbed.create()</h2>
 			<button on:click={() => handler.open()}>Open Link</button>
 		</div>
 	</div>

@@ -1,5 +1,6 @@
-import { OFAUTH_EVENT, Selectors } from "./constants";
+import { OFAUTH_EVENT, OFAUTH_ORIGINS, Selectors } from "./constants";
 import type { EmbedLinkMessageLoaded, EmbedLinkMessageClose, EmbedLinkMessageSuccess } from "./types";
+export type { EmbedLinkMessageLoaded, EmbedLinkMessageClose, EmbedLinkMessageSuccess };
 
 const isEmbedLinkMessage = (
   message: any,
@@ -9,7 +10,7 @@ const isEmbedLinkMessage = (
 
 export interface LinkConfig {
   url: string;
-  theme?: "light" | "dark";
+  theme?: "light" | "dark" | "auto";
   onSuccess?: (data: EmbedLinkMessageSuccess) => void;
   onLoad?: () => void;
   onClose?: () => void;
@@ -90,24 +91,24 @@ class OFAuthLinkEmbed {
         transform: translate(-50%, -50%);
         width: 400px;
         height: 600px;
-        border: 1px solid #e0e0e0;
-        border-radius: 8px;
+        border: 1px solid var(--border, #e0e0e0);
+        border-radius: var(--radius, 8px);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         z-index: 2147483647;
       }
       ${Selectors.iframe}[data-theme="dark"] {
-        border-color: #404040;
+        border-color: var(--border, #404040);
       }
       
       @media (prefers-color-scheme: dark) {
         ${Selectors.iframe}:not([data-theme="light"]) {
-          border-color: #404040;
+          border-color: var(--border, #404040);
         }
       }
 
       @media (prefers-color-scheme: light) {
         ${Selectors.iframe}:not([data-theme="dark"]) {
-          border-color: #e0e0e0;
+          border-color: var(--border, #e0e0e0);
         }
       }
 
@@ -127,7 +128,7 @@ class OFAuthLinkEmbed {
         left: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(0, 0, 0, 0.25);
+        background-color: rgba(0, 0, 0, 0.5);
         z-index: 2147483646;
       }
     `;
@@ -352,12 +353,12 @@ class OFAuthLinkEmbed {
         document.body.removeChild(this.overlay);
       } catch {
       }
-      this.overlay = null;
+      // this.overlay = null;
       try {
         document.body.removeChild(this.iframe);
       } catch {
       }
-      this.iframe = null;
+      // this.iframe = null;
       // Reset loaded state when closing
       this.loaded = false;
     }
@@ -455,14 +456,8 @@ class OFAuthLinkEmbed {
    */
   private initWindowListener(): void {
     window.addEventListener("message", ({ data, origin }) => {
-      if (
-        !["https://link.ofauth.com"].includes(origin)
-      ) {
-        return;
-      }
-      if (!isEmbedLinkMessage(data)) {
-        return;
-      }
+      if (!OFAUTH_ORIGINS.includes(origin)) return;
+      if (!isEmbedLinkMessage(data)) return;
 
       this.eventTarget.dispatchEvent(
         new CustomEvent(data.event, { detail: data, cancelable: true })

@@ -4,6 +4,7 @@
 	"description": "",
 	"main": "index.js",
 	"scripts": {
+		"build": "cd link-embed && pnpm build",
 		"changeset": "changeset",
 		"version": "changeset version",
 		"release": "changeset publish",
