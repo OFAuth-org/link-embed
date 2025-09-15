@@ -1,6 +1,6 @@
 import { OFAUTH_EVENT, OFAUTH_ORIGINS, Selectors } from "./constants";
-import type { EmbedLinkMessageLoaded, EmbedLinkMessageClose, EmbedLinkMessageSuccess } from "./types";
-export type { EmbedLinkMessageLoaded, EmbedLinkMessageClose, EmbedLinkMessageSuccess };
+import type { EmbedLinkMessageLoaded, EmbedLinkMessageClose, EmbedLinkMessageSuccess, Connection } from "./types";
+export type { EmbedLinkMessageLoaded, EmbedLinkMessageClose, EmbedLinkMessageSuccess, Connection };
 
 const isEmbedLinkMessage = (
   message: any,

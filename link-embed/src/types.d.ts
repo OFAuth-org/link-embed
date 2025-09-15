@@ -30,22 +30,9 @@ export interface EmbedLinkMessageSuccess {
     redirect: boolean;
 
     // @deprecated - Set to be deprecated in next major version, use connection.user instead
-    user: {
-        name: string;
-        avatar: string;
-        id: string;
-        username: string;
-    };
+    user: UserData;
 
-    connection: {
-        id: string;
-        user: {
-            userId: string;
-            name: string;
-            username: string;
-            avatar: string;
-        }
-    }
+    connection: Connection;
 }
 
 /**
@@ -55,3 +42,15 @@ export type EmbedLinkMessage =
     | EmbedLinkMessageLoaded
     | EmbedLinkMessageClose
     | EmbedLinkMessageSuccess;
+
+export interface UserData {
+    id: string;
+    name: string;
+    username: string;
+    avatar: string;
+}
+
+export interface Connection {
+    id: string;
+    userData: UserData;
+}
