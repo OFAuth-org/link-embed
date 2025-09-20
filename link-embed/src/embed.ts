@@ -1,52 +1,75 @@
-import { OFAUTH_EVENT, OFAUTH_ORIGINS, Selectors } from "./constants";
-import type { EmbedLinkMessageLoaded, EmbedLinkMessageClose, EmbedLinkMessageSuccess, Connection } from "./types";
-export type { EmbedLinkMessageLoaded, EmbedLinkMessageClose, EmbedLinkMessageSuccess, Connection };
+import { OFAUTH_EVENT, Selectors, isAllowedOrigin } from "./constants";
+import type {
+  CloseMetadata,
+  Connection,
+  SuccessMetadata,
+  EmbedLinkMessage,
+  EmbedLinkMessageExit,
+  EmbedLinkMessageInvalidSession,
+  EmbedLinkMessageSuccess,
+} from "./types";
 
-const isEmbedLinkMessage = (
-  message: any,
-) => {
-  return message.type === OFAUTH_EVENT;
+export type { Connection, CloseMetadata, SuccessMetadata };
+
+type Theme = "light" | "dark" | "auto";
+
+interface LinkEventDetailMap {
+  loaded: undefined;
+  success: SuccessMetadata;
+  close: CloseMetadata;
+  invalid_session: undefined;
+}
+
+const DEFAULT_THEME: Theme = "auto";
+
+const isEmbedLinkMessage = (payload: any): payload is EmbedLinkMessage & { type?: string } => {
+  return Boolean(payload && typeof payload === "object" && payload.type === OFAUTH_EVENT);
 };
 
 export interface LinkConfig {
-  url: string;
-  theme?: "light" | "dark" | "auto";
-  onSuccess?: (data: EmbedLinkMessageSuccess) => void;
-  onLoad?: () => void;
-  onClose?: () => void;
+  url?: string;
+  theme?: Theme;
+  onSuccess?: (metadata: SuccessMetadata) => void | Promise<void>;
+  onLoad?: () => void | Promise<void>;
+  onClose?: (metadata: CloseMetadata) => void | Promise<void>;
+  onInvalidSession?: () => void | Promise<void>;
 }
 
 export interface LinkHandler {
-  open: () => void;
-  close: () => void;
+  open: (url?: string) => void;
+  close: (options?: { force?: boolean }) => void;
   destroy: () => void;
-  ready: boolean;
+  cleanup: () => void;
+  setUrl: (url: string) => void;
+  readonly ready: boolean;
 }
 
 /**
  * Represents an embedded Link instance.
  */
 class OFAuthLinkEmbed {
-  private loaded: boolean;
-  private eventTarget: EventTarget;
-  private iframe: HTMLIFrameElement | null;
-  private overlay: HTMLElement | null;
-  private loader: HTMLElement | null;
-  private styleSheet: HTMLStyleElement | null;
+  private static triggerHandlers = new WeakMap<Element, LinkHandler>();
+
   private config: LinkConfig;
+  private loaded = false;
+  private eventTarget = new EventTarget();
+  private iframe: HTMLIFrameElement | null = null;
+  private overlay: HTMLElement | null = null;
+  private loader: HTMLElement | null = null;
+  private styleSheet: HTMLStyleElement | null = null;
+  private currentUrl: string | null;
+  private iframeOrigin: string | null;
+  private messageListener: (event: MessageEvent) => void;
+  private destroyed = false;
 
   private constructor(config: LinkConfig) {
-    this.loaded = false;
-    this.eventTarget = new EventTarget();
-    this.iframe = null;
-    this.overlay = null;
-    this.loader = null;
-    this.styleSheet = null;
-    this.config = config;
+    this.config = { ...config };
+    this.currentUrl = config.url ? this.prepareUrl(config.url) : null;
+    this.iframeOrigin = this.currentUrl ? new URL(this.currentUrl).origin : null;
+    this.messageListener = this.handleWindowMessage.bind(this);
+
+    this.addInternalListeners();
     this.initWindowListener();
-    this.addEventListener("loaded", this.loadedListener.bind(this));
-    this.addEventListener("close", this.closeListener.bind(this));
-    this.addEventListener("success", this.successListener.bind(this));
   }
 
   /**
@@ -59,9 +82,43 @@ class OFAuthLinkEmbed {
   }
 
   private initialize(): LinkHandler {
-    // Create and inject stylesheet
+    this.ensureStyleSheet();
+    if (this.currentUrl) {
+      this.ensureOverlay();
+      this.ensureIframe();
+    }
+
+    const handler = {
+      open: this.open.bind(this),
+      close: this.close.bind(this),
+      destroy: this.destroy.bind(this),
+      cleanup: this.cleanup.bind(this),
+      setUrl: this.setUrl.bind(this),
+      ready: this.loaded,
+    } as LinkHandler;
+
+    Object.defineProperty(handler, "ready", {
+      get: () => this.loaded,
+      enumerable: true,
+    });
+
+    return handler;
+  }
+
+  private addInternalListeners(): void {
+    this.addEventListener("loaded", this.loadedListener.bind(this));
+    this.addEventListener("success", this.successListener.bind(this));
+    this.addEventListener("close", this.closeListener.bind(this));
+    this.addEventListener("invalid_session", this.invalidSessionListener.bind(this));
+  }
+
+  private ensureStyleSheet(): void {
+    if (this.styleSheet || typeof document === "undefined") {
+      return;
+    }
+
     this.styleSheet = document.createElement("style");
-    this.styleSheet.innerText = `
+    this.styleSheet.innerHTML = `
       ${Selectors.loader} .ofauth-loader-spinner {
         width: 40px;
         height: 40px;
@@ -95,6 +152,7 @@ class OFAuthLinkEmbed {
         border-radius: var(--radius, 8px);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         z-index: 2147483647;
+        background-color: transparent;
       }
       ${Selectors.iframe}[data-theme="dark"] {
         border-color: var(--border, #404040);
@@ -113,13 +171,16 @@ class OFAuthLinkEmbed {
       }
 
       ${Selectors.loader} {
-        position: absolute;
+        position: fixed;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
         z-index: 2147483647;
         width: 40px;
         height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       
       ${Selectors.overlay} {
@@ -130,188 +191,389 @@ class OFAuthLinkEmbed {
         height: 100%;
         background-color: rgba(0, 0, 0, 0.5);
         z-index: 2147483646;
+        display: none;
       }
     `;
+
     document.head.appendChild(this.styleSheet);
-
-    // Create and prepare iframe but don't display it yet
-    try {
-      var parsedURL = new URL(this.config.url);
-    } catch (error) {
-      console.error("Invalid URL: ", this.config.url, error);
-      return {
-        open: () => {
-          console.error("Invalid URL, please reinitialize with a valid URL: ", this.config.url);
-        },
-        close: () => {
-          console.error("Invalid URL, please reinitialize with a valid URL: ", this.config.url);
-        },
-        destroy: () => {
-          console.error("Invalid URL, please reinitialize with a valid URL: ", this.config.url);
-        },
-        ready: false
-      };
-    }
-    parsedURL.searchParams.set("embed", "true");
-    parsedURL.searchParams.set("embed_origin", window.location.origin);
-    if (this.config.theme) {
-      parsedURL.searchParams.set("theme", this.config.theme);
-    }
-    this.config.url = parsedURL.toString();
-
-    if (!this.iframe) {
-      // look for existing iframe
-      this.iframe = document.querySelector(Selectors.iframe);
-    }
-
-    if (!this.iframe) {
-      this.iframe = document.createElement("iframe");
-      this.iframe.src = this.config.url;
-      this.iframe.id = Selectors.iframe.replace("#", "");
-      this.iframe.style.display = "none";
-      this.iframe.setAttribute("data-theme", this.config.theme || "auto");
-    }
-
-    if (!this.overlay) {
-      // look for existing overlay
-      this.overlay = document.querySelector(Selectors.overlay);
-    }
-
-    if (!this.overlay) {
-      // Create overlay but don't display it yet
-      this.overlay = document.createElement("div");
-      this.overlay.id = Selectors.overlay.replace("#", "");
-      this.overlay.style.display = "none";
-    }
-
-    // document.body.appendChild(this.iframe);
-    // document.body.appendChild(this.overlay);
-
-    return {
-      open: this.open.bind(this),
-      close: this.close.bind(this),
-      destroy: this.destroy.bind(this),
-      ready: this.loaded
-    };
   }
 
-  private createLoader(): void {
-    if (this.loader) {
+  private ensureOverlay(): void {
+    if (this.overlay || typeof document === "undefined") {
       return;
     }
-    this.loader = document.createElement("div");
-    this.loader.id = Selectors.loader.replace("#", "");
 
-    // add spinner
+    this.overlay = document.createElement("div");
+    this.overlay.id = Selectors.overlay.replace("#", "");
+    this.overlay.style.display = "none";
+    this.overlay.addEventListener("click", () => {
+      this.close();
+    });
+  }
+
+  private ensureIframe(): void {
+    if (this.iframe || typeof document === "undefined" || !this.currentUrl) {
+      return;
+    }
+
+    this.iframe = document.createElement("iframe");
+    this.iframe.id = Selectors.iframe.replace("#", "");
+    this.iframe.style.display = "none";
+    this.iframe.setAttribute("data-theme", this.config.theme ?? DEFAULT_THEME);
+    this.iframe.setAttribute("allow", "camera; microphone; clipboard-read; clipboard-write");
+    this.iframe.src = this.currentUrl;
+  }
+
+  private prepareUrl(url: string): string {
+    try {
+      const parsed = new URL(url);
+      parsed.searchParams.set("embed", "true");
+      parsed.searchParams.set("embed_origin", window.location.origin);
+      const theme = this.config.theme ?? DEFAULT_THEME;
+      parsed.searchParams.set("theme", theme);
+      return parsed.toString();
+    } catch (error) {
+      console.error("[OFAuth] Invalid Link session URL provided:", url, error);
+      throw error;
+    }
+  }
+
+  public setUrl(url: string): void {
+    if (this.destroyed) {
+      return;
+    }
+
+    try {
+      const prepared = this.prepareUrl(url);
+      this.currentUrl = prepared;
+      this.iframeOrigin = new URL(prepared).origin;
+
+      if (typeof document !== "undefined" && this.iframe && !document.body.contains(this.iframe)) {
+        this.iframe.src = prepared;
+      }
+
+      this.loaded = false;
+    } catch {
+      // prepareUrl already logged the error.
+    }
+  }
+
+  private showLoader(): void {
+    if (this.loader || typeof document === "undefined") {
+      return;
+    }
+
+    const loader = document.createElement("div");
+    loader.id = Selectors.loader.replace("#", "");
+
     const spinner = document.createElement("div");
     spinner.className = "ofauth-loader-spinner";
-    this.loader.appendChild(spinner);
+    loader.appendChild(spinner);
 
-    document.body.appendChild(this.loader);
+    document.body.appendChild(loader);
+    this.loader = loader;
   }
 
-  private open(): void {
-    if (this.iframe && this.overlay) {
-      // Reset loaded state when opening
-      this.loaded = false;
+  private hideLoader(): void {
+    if (!this.loader || typeof document === "undefined") {
+      return;
+    }
 
-      // Reload the iframe content
-      this.iframe.style.display = "none";
-      this.overlay.style.display = "none";
+    try {
+      document.body.removeChild(this.loader);
+    } catch {
+      // ignore
+    }
 
+    this.loader = null;
+  }
 
-      // show loader
-      document.body.classList.add("ofauth-no-scroll");
-      this.createLoader();
+  private appendElements(): void {
+    if (!this.overlay || !this.iframe || typeof document === "undefined") {
+      return;
+    }
 
-      this.iframe.src = this.config.url;
-
-      document.body.appendChild(this.iframe);
+    if (!document.body.contains(this.overlay)) {
       document.body.appendChild(this.overlay);
+    }
 
-      // wait for the iframe to load
-      this.iframe.addEventListener("load", () => {
-        if (this.iframe) {
-          this.iframe.style.display = "block";
-        }
-        if (this.overlay) {
-          this.overlay.style.display = "block";
-        }
-        // remove loader
-        if (this.loader) {
-          try {
-            document.body.removeChild(this.loader);
-          } catch {
-          }
-          this.loader = null;
-        }
-      }, { once: true });
+    if (!document.body.contains(this.iframe)) {
+      document.body.appendChild(this.iframe);
     }
   }
 
-  private destroy(): void {
-    // Remove both iframe and overlay
-    if (this.iframe) {
-      try {
-        document.body.removeChild(this.iframe);
-      } catch {
-      }
-      this.iframe = null;
-    }
-    if (this.overlay) {
-      try {
-        document.body.removeChild(this.overlay);
-      } catch {
-      }
-      this.overlay = null;
-    }
-    if (this.styleSheet) {
-      try {
-        document.head.removeChild(this.styleSheet);
-      } catch {
-      }
-      this.styleSheet = null;
+  private detachElements(): void {
+    if (typeof document === "undefined") {
+      return;
     }
 
-    if (this.loader) {
-      try {
-        document.body.removeChild(this.loader);
-      } catch {
-      }
-      this.loader = null;
+    if (this.overlay && document.body.contains(this.overlay)) {
+      this.overlay.style.display = "none";
+      document.body.removeChild(this.overlay);
     }
-    // Clean up event listeners
+
+    if (this.iframe && document.body.contains(this.iframe)) {
+      this.iframe.style.display = "none";
+      document.body.removeChild(this.iframe);
+    }
+  }
+
+  private handleWindowMessage(event: MessageEvent): void {
+    if (!isAllowedOrigin(event.origin)) {
+      return;
+    }
+
+    if (this.iframe && event.source && event.source !== this.iframe.contentWindow) {
+      return;
+    }
+
+    const payload = event.data;
+
+    if (!isEmbedLinkMessage(payload)) {
+      return;
+    }
+
+    switch (payload.event) {
+      case "loaded": {
+        this.eventTarget.dispatchEvent(new CustomEvent("loaded"));
+        break;
+      }
+      case "success": {
+        this.handleSuccessMessage(payload as EmbedLinkMessageSuccess);
+        break;
+      }
+      case "exit": {
+        this.handleExitMessage(payload as EmbedLinkMessageExit);
+        break;
+      }
+      case "invalid_session": {
+        this.handleInvalidSessionMessage(payload as EmbedLinkMessageInvalidSession);
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  private handleSuccessMessage(message: EmbedLinkMessageSuccess): void {
+    const metadata = message.metadata;
+    this.eventTarget.dispatchEvent(
+      new CustomEvent<SuccessMetadata>("success", { detail: metadata, cancelable: true }),
+    );
+  }
+
+  private handleExitMessage(message: EmbedLinkMessageExit): void {
+    const metadata = message.metadata;
+    this.eventTarget.dispatchEvent(
+      new CustomEvent<CloseMetadata>("close", { detail: metadata, cancelable: true }),
+    );
+  }
+
+  private handleInvalidSessionMessage(_message: EmbedLinkMessageInvalidSession): void {
+    this.eventTarget.dispatchEvent(
+      new CustomEvent("invalid_session", { cancelable: false }),
+    );
+  }
+
+  private sendExitRequest(force?: boolean): void {
+    if (!this.iframe || !this.iframe.contentWindow || !this.iframeOrigin) {
+      return;
+    }
+
+    try {
+      this.iframe.contentWindow.postMessage(
+        { type: OFAUTH_EVENT, event: "exit_requested", force: Boolean(force) },
+        this.iframeOrigin,
+      );
+    } catch (error) {
+      console.error("[OFAuth] Failed to send exit request", error);
+    }
+  }
+
+  public open(url?: string): void {
+    if (this.destroyed) {
+      console.warn("[OFAuth] Attempted to open a destroyed handler. Create a new handler instead.");
+      return;
+    }
+
+    if (typeof document === "undefined") {
+      console.error("[OFAuth] Unable to open Link embed outside of a browser environment.");
+      return;
+    }
+
+    if (url) {
+      this.setUrl(url);
+    }
+
+    if (!this.currentUrl) {
+      console.error("[OFAuth] No Link session URL has been provided. Pass a URL to open() or setUrl().");
+      return;
+    }
+
+    this.ensureStyleSheet();
+    this.ensureOverlay();
+    this.ensureIframe();
+
+    if (!this.iframe || !this.overlay) {
+      return;
+    }
+
+    this.loaded = false;
+    this.overlay.style.display = "block";
+    this.iframe.style.display = "none";
+
+    this.showLoader();
+    this.appendElements();
+    document.body.classList.add("ofauth-no-scroll");
+
+    const onLoad = () => {
+      if (this.iframe) {
+        this.iframe.style.display = "block";
+      }
+      this.hideLoader();
+    };
+
+    this.iframe.addEventListener("load", onLoad, { once: true });
+    this.iframe.setAttribute("data-theme", this.config.theme ?? DEFAULT_THEME);
+    this.iframe.src = this.currentUrl;
+  }
+
+  public close(options?: { force?: boolean }): void {
+    if (this.destroyed) {
+      return;
+    }
+
+    this.sendExitRequest(options?.force);
+
+    if (options?.force) {
+      this.cleanup();
+    }
+  }
+
+  public cleanup(): void {
+    if (this.destroyed) {
+      return;
+    }
+
+    this.hideLoader();
+    this.detachElements();
+
+    if (typeof document !== "undefined") {
+      document.body.classList.remove("ofauth-no-scroll");
+    }
+
+    this.loaded = false;
+  }
+
+  public destroy(): void {
+    if (this.destroyed) {
+      return;
+    }
+
+    if (typeof window !== "undefined") {
+      window.removeEventListener("message", this.messageListener);
+    }
+    this.cleanup();
+
+    if (this.styleSheet && this.styleSheet.parentNode) {
+      try {
+        this.styleSheet.parentNode.removeChild(this.styleSheet);
+      } catch {
+        // ignore
+      }
+    }
+
+    this.styleSheet = null;
+    this.iframe = null;
+    this.overlay = null;
     this.eventTarget = new EventTarget();
+    this.destroyed = true;
   }
 
-  // Update success listener to use config callback
-  private successListener(event: CustomEvent<EmbedLinkMessageSuccess>): void {
+  private loadedListener(_event: CustomEvent<undefined>): void {
+    if (this.loaded) {
+      return;
+    }
+
+    this.loaded = true;
+    this.hideLoader();
+
+    if (this.config.onLoad) {
+      Promise.resolve(this.config.onLoad()).catch((error) => {
+        console.error("[OFAuth] Error in onLoad callback", error);
+      });
+    }
+  }
+
+  private successListener(event: CustomEvent<SuccessMetadata>): void {
     if (event.defaultPrevented) {
       return;
     }
+
+    const metadata = event.detail;
+
+    const finalize = () => {
+      if (metadata.redirect) {
+        window.location.href = metadata.successUrl;
+      } else {
+        this.cleanup();
+      }
+    };
 
     if (this.config.onSuccess) {
-      this.config.onSuccess(event.detail);
-    }
-
-    if (event.detail.redirect) {
-      window.location.href = event.detail.successUrl;
+      Promise.resolve(this.config.onSuccess(metadata))
+        .then(finalize)
+        .catch((error) => {
+          console.error("[OFAuth] Error in onSuccess callback", error);
+          finalize();
+        });
     } else {
-      this.destroy();
+      finalize();
     }
   }
 
-  // Update close listener to use config callback
-  private closeListener(event: CustomEvent<EmbedLinkMessageClose>): void {
+  private closeListener(event: CustomEvent<CloseMetadata>): void {
     if (event.defaultPrevented) {
       return;
     }
 
-    this.close();
+    const finalize = () => {
+      this.cleanup();
+    };
 
     if (this.config.onClose) {
-      this.config.onClose();
+      Promise.resolve(this.config.onClose(event.detail))
+        .then(finalize)
+        .catch((error) => {
+          console.error("[OFAuth] Error in onClose callback", error);
+          finalize();
+        });
+    } else {
+      finalize();
     }
+  }
+
+  private invalidSessionListener(): void {
+    if (this.config.onInvalidSession) {
+      Promise.resolve(this.config.onInvalidSession()).catch((error) => {
+        console.error("[OFAuth] Error in onInvalidSession callback", error);
+      });
+    }
+  }
+
+  public addEventListener<T extends keyof LinkEventDetailMap>(
+    type: T,
+    listener: (event: CustomEvent<LinkEventDetailMap[T]>) => void,
+    options?: AddEventListenerOptions | boolean,
+  ): void {
+    this.eventTarget.addEventListener(type, listener as EventListener, options);
+  }
+
+  public removeEventListener<T extends keyof LinkEventDetailMap>(
+    type: T,
+    listener: (event: CustomEvent<LinkEventDetailMap[T]>) => void,
+  ): void {
+    this.eventTarget.removeEventListener(type, listener as EventListener);
   }
 
   /**
@@ -319,150 +581,78 @@ class OFAuthLinkEmbed {
    *
    * This method will add a click event listener to all elements with the `data-ofauth-link` attribute.
    * The Link client session URL is either the `href` attribute for a link element or the value of `data-ofauth-link` attribute.
-   *
-   * The theme can be optionally set using the `data-ofauth-theme` attribute.
-   *
-   * @example
-   * ```html
-   * <a href="https://link.ofauth.com/s/cs_xxxxxxxx" data-ofauth-link data-ofauth-theme="dark">Link</a>
-   * ```
    */
   public static init(): void {
-    const LinkElements = document.querySelectorAll("[data-ofauth-link]");
-    LinkElements.forEach((LinkElement) => {
-      LinkElement.removeEventListener(
-        "click",
-        OFAuthLinkEmbed.elementClickHandler,
-      );
-      LinkElement.addEventListener(
-        "click",
-        OFAuthLinkEmbed.elementClickHandler,
-      );
+    const linkElements = document.querySelectorAll<HTMLElement>("[data-ofauth-link]");
+    linkElements.forEach((element) => {
+      element.removeEventListener("click", OFAuthLinkEmbed.elementClickHandler);
+      element.addEventListener("click", OFAuthLinkEmbed.elementClickHandler);
     });
   }
 
-  /**
-   * Close the embedded Link.
-   */
-  public close(): void {
-    if (this.iframe && this.overlay) {
-      this.iframe.style.display = "none";
-      this.overlay.style.display = "none";
-      document.body.classList.remove("ofauth-no-scroll");
-      try {
-        document.body.removeChild(this.overlay);
-      } catch {
-      }
-      // this.overlay = null;
-      try {
-        document.body.removeChild(this.iframe);
-      } catch {
-      }
-      // this.iframe = null;
-      // Reset loaded state when closing
-      this.loaded = false;
-    }
-  }
+  private static elementClickHandler(event: Event): void {
+    event.preventDefault();
+    const target = event.currentTarget as HTMLElement | null;
 
-  /**
-   * Add an event listener to the embedded Link events.
-   *
-   * @param type
-   * @param listener
-   */
-  public addEventListener(
-    type: "loaded",
-    listener: (event: CustomEvent<EmbedLinkMessageLoaded>) => void,
-    options?: AddEventListenerOptions | boolean,
-  ): void;
-  public addEventListener(
-    type: "close",
-    listener: (event: CustomEvent<EmbedLinkMessageClose>) => void,
-    options?: AddEventListenerOptions | boolean,
-  ): void;
-  public addEventListener(
-    type: "success",
-    listener: (event: CustomEvent<EmbedLinkMessageSuccess>) => void,
-    options?: AddEventListenerOptions | boolean,
-  ): void;
-  public addEventListener(
-    type: string,
-    listener: any,
-    options?: AddEventListenerOptions | boolean,
-  ): void {
-    this.eventTarget.addEventListener(type, listener, options);
-  }
-
-  /**
-   * Remove an event listener from the embedded Link events.
-   *
-   * @param type
-   * @param listener
-   */
-  public removeEventListener(
-    type: "loaded",
-    listener: (event: CustomEvent<EmbedLinkMessageLoaded>) => void,
-  ): void;
-  public removeEventListener(
-    type: "close",
-    listener: (event: CustomEvent<EmbedLinkMessageClose>) => void,
-  ): void;
-  public removeEventListener(
-    type: "success",
-    listener: (event: CustomEvent<EmbedLinkMessageSuccess>) => void,
-  ): void;
-  public removeEventListener(type: string, listener: any): void {
-    this.eventTarget.removeEventListener(type, listener);
-  }
-
-  private static async elementClickHandler(e: Event) {
-    e.preventDefault();
-    const LinkElement = e.target as HTMLElement;
-    const url = LinkElement.getAttribute("href") ||
-      (LinkElement.getAttribute("data-ofauth-link") as string);
-    const theme = LinkElement.getAttribute("data-ofauth-theme") as
-      | "light"
-      | "dark"
-      | undefined;
-    OFAuthLinkEmbed.create({ url, theme });
-  }
-
-  /**
-   * Default listener for the `load` event.
-   *
-   * This listener will remove the loader spinner when the embedded Link is fully loaded.
-   */
-  private loadedListener(event: CustomEvent<EmbedLinkMessageLoaded>): void {
-    if (event.defaultPrevented || this.loaded) {
+    if (!target) {
       return;
     }
-    const loader = document.getElementById("ofauth-loader");
-    if (loader) {
-      try {
-        document.body.removeChild(loader);
-      } catch {
-      }
-      this.loader = null;
+
+    const url = target.getAttribute("href") ?? target.getAttribute("data-ofauth-link") ?? undefined;
+    const themeAttribute = target.getAttribute("data-ofauth-theme");
+    const theme = themeAttribute === "light" || themeAttribute === "dark" || themeAttribute === "auto"
+      ? themeAttribute
+      : undefined;
+
+    const dispatchSuccess = (metadata: SuccessMetadata) => {
+      target.dispatchEvent(new CustomEvent("success", { detail: { metadata } }));
+    };
+
+    const dispatchClose = (metadata: CloseMetadata) => {
+      target.dispatchEvent(new CustomEvent("close", { detail: { metadata } }));
+    };
+
+    const dispatchLoaded = () => {
+      target.dispatchEvent(new CustomEvent("loaded"));
+    };
+
+    const dispatchInvalidSession = () => {
+      target.dispatchEvent(new CustomEvent("invalid_session"));
+    };
+
+    let handler = OFAuthLinkEmbed.triggerHandlers.get(target);
+    const cachedTheme = target.dataset.ofauthThemeCache ?? "";
+    const normalizedTheme = theme ?? "";
+
+    if (!handler || cachedTheme !== normalizedTheme) {
+      handler?.destroy();
+
+      handler = OFAuthLinkEmbed.create({
+        theme,
+        onLoad: dispatchLoaded,
+        onSuccess: dispatchSuccess,
+        onClose: dispatchClose,
+        onInvalidSession: dispatchInvalidSession,
+      });
+
+      OFAuthLinkEmbed.triggerHandlers.set(target, handler);
+      target.dataset.ofauthThemeCache = normalizedTheme;
     }
-    this.loaded = true;
-    if (this.config.onLoad) {
-      this.config.onLoad();
+
+    if (url) {
+      handler.setUrl(url);
+      handler.open();
+    } else {
+      console.error("[OFAuth] data-ofauth-link element is missing a session URL.");
     }
   }
 
-  /**
-   * Initialize the window message listener to receive messages from the embedded Link
-   * and re-dispatch them as events for the embedded Link instance.
-   */
   private initWindowListener(): void {
-    window.addEventListener("message", ({ data, origin }) => {
-      if (!OFAUTH_ORIGINS.includes(origin)) return;
-      if (!isEmbedLinkMessage(data)) return;
+    if (typeof window === "undefined") {
+      return;
+    }
 
-      this.eventTarget.dispatchEvent(
-        new CustomEvent(data.event, { detail: data, cancelable: true })
-      );
-    });
+    window.addEventListener("message", this.messageListener);
   }
 }
 

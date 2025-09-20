@@ -10,8 +10,7 @@
 
 <script lang="ts">
 	import { onMount } from "svelte"
-	import { OFAuthLinkEmbed, type LinkHandler } from "@ofauth/link-embed"
-	import { inherits } from "util"
+	import { OFAuthLinkEmbed, type LinkHandler, type CloseMetadata, type SuccessMetadata } from "@ofauth/link-embed"
 	let loginButton
 
 	let url = "https://link.ofauth.com/s/cs_snhhu1iesc6vquzk06qd6ixnrvdq"
@@ -26,12 +25,12 @@
 		handler = OFAuthLinkEmbed.create({
 			url,
 			theme: "auto",
-			onSuccess: (data) => {
-				console.log("success", data)
+			onSuccess: (metadata: SuccessMetadata) => {
+				console.log("success", metadata)
 				handler.destroy() // cleans up/removes the dom elements
 			},
-			onClose: () => {
-				console.log("closed")
+			onClose: (metadata: CloseMetadata) => {
+				console.log("closed", metadata.type)
 			}
 		})
 		// handler has { open: () => void, close: () => void, destroy: () => void, ready: boolean }

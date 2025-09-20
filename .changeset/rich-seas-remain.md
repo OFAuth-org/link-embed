@@ -1,5 +1,5 @@
 ---
-"@ofauth/link-embed": minor
+"@ofauth/link-embed": major
 ---
 
-Added a 'connection' object to success data, in-line with new Link API expectations
+Revamped the Link Embed surface so handlers, events, and types align with the public docs.

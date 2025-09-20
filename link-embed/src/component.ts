@@ -1,16 +1,25 @@
 import { type LinkHandler, OFAuthLinkEmbed } from "./embed";
 
+type Theme = "light" | "dark" | "auto";
+
 class LinkComponent extends HTMLElement {
-    private embedLinkHandler: LinkHandler | null = null;
-    private button: HTMLButtonElement;
+  private embedLinkHandler: LinkHandler | null = null;
+  private button: HTMLButtonElement;
+  private currentTheme: Theme | undefined;
 
-    constructor() {
-        super();
-        this.attachShadow({ mode: 'open' });
+  static get observedAttributes(): string[] {
+    return ["label", "url", "theme"];
+  }
 
-        // Create a style element for default styles
-        const style = document.createElement('style');
-        style.textContent = `
+  constructor() {
+    super();
+    this.attachShadow({ mode: "open" });
+
+    const style = document.createElement("style");
+    style.textContent = `
+      :host {
+        display: inline-block;
+      }
       .ofauth-link-button {
         padding: 10px 20px;
         font-size: 16px;
@@ -19,62 +28,124 @@ class LinkComponent extends HTMLElement {
         border-radius: 5px;
         background-color: #007bff;
         color: #fff;
-        transition: background-color 0.3s;
+        transition: background-color 0.2s ease-in-out;
       }
       .ofauth-link-button:hover {
         background-color: #0056b3;
       }
+      .ofauth-link-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
     `;
 
-        // Create a button element
-        this.button = document.createElement('button');
-        this.button.className = 'ofauth-link-button';
-        this.button.setAttribute('part', 'button');
+    this.button = document.createElement("button");
+    this.button.className = "ofauth-link-button";
+    this.button.setAttribute("part", "button");
 
-        // Append style and button to shadow DOM
-        this.shadowRoot?.appendChild(style);
-        this.shadowRoot?.appendChild(this.button);
+    this.shadowRoot?.append(style, this.button);
 
-        // Add click event to button
-        this.button.addEventListener('click', () => this.handleButtonClick());
-    }
+    this.button.addEventListener("click", () => this.handleButtonClick());
+  }
 
-    connectedCallback() {
-        // Use either the label attribute or slot content
-        const label = this.getAttribute('label');
-        this.button.textContent = label || this.textContent || 'Link';
-    }
+  connectedCallback(): void {
+    this.currentTheme = this.readThemeAttribute();
+    this.syncLabel();
+  }
 
-    disconnectedCallback() {
+  disconnectedCallback(): void {
+    this.destroyHandler();
+  }
+
+  attributeChangedCallback(name: string): void {
+    switch (name) {
+      case "label":
+        this.syncLabel();
+        break;
+      case "url":
         if (this.embedLinkHandler) {
-            this.embedLinkHandler.destroy();
-            this.embedLinkHandler = null;
+          const url = this.getUrl();
+          if (url) {
+            this.embedLinkHandler.setUrl(url);
+          }
         }
+        break;
+      case "theme":
+        this.currentTheme = this.readThemeAttribute();
+        this.resetHandler();
+        break;
+      default:
+        break;
+    }
+  }
+
+  private handleButtonClick(): void {
+    const url = this.getUrl();
+
+    if (!url) {
+      console.error("[OFAuth] <ofauth-link> requires a valid 'url' attribute before opening.");
+      return;
     }
 
-    private async handleButtonClick() {
-        const url = this.getAttribute('url');
-        const theme = this.getAttribute('theme') as "light" | "dark" | undefined;
-
-        if (url) {
-            if (!this.embedLinkHandler) {
-                this.embedLinkHandler = await OFAuthLinkEmbed.create({
-                    url,
-                    theme,
-                    onSuccess: (data) => {
-                        this.dispatchEvent(new CustomEvent('success', { detail: data, composed: true }));
-                    },
-                    onClose: () => {
-                        this.dispatchEvent(new CustomEvent('close', { composed: true }));
-                    }
-                });
-            }
-
-            this.embedLinkHandler.open();
-        }
+    if (!this.embedLinkHandler) {
+      this.embedLinkHandler = this.createHandler();
     }
+
+    this.embedLinkHandler.setUrl(url);
+    this.embedLinkHandler.open();
+  }
+
+  private createHandler(): LinkHandler {
+    return OFAuthLinkEmbed.create({
+      theme: this.currentTheme,
+      onLoad: () => {
+        this.dispatchEvent(new CustomEvent("loaded", { composed: true }));
+      },
+      onSuccess: (metadata) => {
+        this.dispatchEvent(new CustomEvent("success", { detail: { metadata }, composed: true }));
+      },
+      onClose: (metadata) => {
+        this.dispatchEvent(new CustomEvent("close", { detail: { metadata }, composed: true }));
+      },
+      onInvalidSession: () => {
+        this.dispatchEvent(new CustomEvent("invalid_session", { composed: true }));
+      },
+    });
+  }
+
+  private syncLabel(): void {
+    const label = this.getAttribute("label") ?? this.textContent ?? "Connect Account";
+    this.button.textContent = label.trim();
+  }
+
+  private getUrl(): string | null {
+    const url = this.getAttribute("url");
+    return url && url.trim().length > 0 ? url.trim() : null;
+  }
+
+  private readThemeAttribute(): Theme | undefined {
+    const theme = this.getAttribute("theme");
+    if (theme === "light" || theme === "dark" || theme === "auto") {
+      return theme;
+    }
+    return undefined;
+  }
+
+  private resetHandler(): void {
+    if (this.embedLinkHandler) {
+      this.destroyHandler();
+      // Handler recreated on next click with updated configuration.
+    }
+  }
+
+  private destroyHandler(): void {
+    if (this.embedLinkHandler) {
+      this.embedLinkHandler.destroy();
+      this.embedLinkHandler = null;
+    }
+  }
 }
 
-customElements.define('ofauth-link', LinkComponent);
+customElements.define("ofauth-link", LinkComponent);
 
 export { LinkComponent };
