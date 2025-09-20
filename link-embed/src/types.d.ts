@@ -7,7 +7,7 @@ export interface EmbedLinkMessageLoaded {
 }
 
 export type CloseType = "user_exit" | "error" | "forced_exit";
-export type CloseStep = "pre-login" | "login" | "2fa" | "approval" | "success" | "error";
+export type CloseStep = "pre-login" | "login" | "2fa" | "success" | "error";
 
 export interface CloseError {
     error_type: string;
