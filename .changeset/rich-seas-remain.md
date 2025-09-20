@@ -2,4 +2,4 @@
 "@ofauth/link-embed": major
 ---
 
-Revamped the Link Embed surface so handlers, events, and types align with the public docs.
+Revamped the Link Embed surface so it is easier to handle invalid sessions, exiting/closing the embed, and more.
