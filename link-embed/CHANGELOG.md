@@ -1,5 +1,11 @@
 # @ofauth/link-embed
 
+## 4.0.0
+
+### Major Changes
+
+- 0f6afe5: Revamped the Link Embed surface so it is easier to handle invalid sessions, exiting/closing the embed, and more.
+
 ## 3.0.0
 
 ### Major Changes
