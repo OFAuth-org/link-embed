@@ -4,6 +4,7 @@ export const Selectors = {
     loader: "#ofauth-loader",
     iframe: "#ofauth-iframe",
     overlay: "#ofauth-modal-overlay",
+    sandboxBanner: "#ofauth-sandbox-banner",
 }
 
 export const OFAUTH_ORIGINS = [
@@ -29,7 +30,7 @@ export function isAllowedOrigin(origin: string): boolean {
         if (isLocalhost) {
             return true;
         }
-        
+
         // Allow any *.ofauth.com subdomain for iframe origins
         if (url.hostname.endsWith('.ofauth.com')) {
             return true;
@@ -38,7 +39,7 @@ export function isAllowedOrigin(origin: string): boolean {
         console.log(`[OFAuth] Invalid origin format: ${origin}`);
         return false;
     }
-    
+
     console.log(`[OFAuth] Rejected origin: ${origin} - not from trusted OFAuth domain`);
     return false;
 }

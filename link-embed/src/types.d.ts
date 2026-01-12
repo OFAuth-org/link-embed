@@ -61,8 +61,28 @@ export interface EmbedLinkMessageInvalidSession {
     event: "invalid_session";
 }
 
+export interface SandboxScenario {
+    id: string;
+    accountType: "creator" | "fan";
+    loginType: "password" | "app_otp";
+    password: string;
+    otpCode?: string;
+}
+
+export interface SandboxInfoMetadata {
+    scenarios: SandboxScenario[];
+    activeScenarioId: string;
+    currentScreen: string;
+}
+
+export interface EmbedLinkMessageSandboxInfo {
+    event: "sandbox_info";
+    metadata: SandboxInfoMetadata;
+}
+
 export type EmbedLinkMessage =
     | EmbedLinkMessageLoaded
     | EmbedLinkMessageExit
     | EmbedLinkMessageSuccess
-    | EmbedLinkMessageInvalidSession;
+    | EmbedLinkMessageInvalidSession
+    | EmbedLinkMessageSandboxInfo;
