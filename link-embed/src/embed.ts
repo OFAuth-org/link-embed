@@ -3,13 +3,15 @@ import type {
   CloseMetadata,
   Connection,
   SuccessMetadata,
+  SandboxInfoMetadata,
   EmbedLinkMessage,
   EmbedLinkMessageExit,
   EmbedLinkMessageInvalidSession,
   EmbedLinkMessageSuccess,
+  EmbedLinkMessageSandboxInfo,
 } from "./types";
 
-export type { Connection, CloseMetadata, SuccessMetadata };
+export type { Connection, CloseMetadata, SuccessMetadata, SandboxInfoMetadata, EmbedLinkMessage };
 
 type Theme = "light" | "dark" | "auto";
 
@@ -18,6 +20,7 @@ interface LinkEventDetailMap {
   success: SuccessMetadata;
   close: CloseMetadata;
   invalid_session: undefined;
+  sandbox_info: SandboxInfoMetadata;
 }
 
 const DEFAULT_THEME: Theme = "auto";
@@ -33,6 +36,7 @@ export interface LinkConfig {
   onLoad?: () => void | Promise<void>;
   onClose?: (metadata: CloseMetadata) => void | Promise<void>;
   onInvalidSession?: () => void | Promise<void>;
+  onSandboxInfo?: (metadata: SandboxInfoMetadata) => void | Promise<void>;
 }
 
 export interface LinkHandler {
@@ -56,6 +60,8 @@ class OFAuthLinkEmbed {
   private iframe: HTMLIFrameElement | null = null;
   private overlay: HTMLElement | null = null;
   private loader: HTMLElement | null = null;
+  private sandboxBanner: HTMLElement | null = null;
+  private sandboxInfo: SandboxInfoMetadata | null = null;
   private styleSheet: HTMLStyleElement | null = null;
   private currentUrl: string | null;
   private iframeOrigin: string | null;
@@ -110,6 +116,7 @@ class OFAuthLinkEmbed {
     this.addEventListener("success", this.successListener.bind(this));
     this.addEventListener("close", this.closeListener.bind(this));
     this.addEventListener("invalid_session", this.invalidSessionListener.bind(this));
+    this.addEventListener("sandbox_info", this.sandboxInfoListener.bind(this));
   }
 
   private ensureStyleSheet(): void {
@@ -193,6 +200,143 @@ class OFAuthLinkEmbed {
         z-index: 2147483646;
         display: none;
       }
+
+      ${Selectors.sandboxBanner} {
+        position: fixed;
+        bottom: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 2147483647;
+        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        border-radius: 12px;
+        padding: 12px 16px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        color: #e0e7ff;
+        max-width: 360px;
+        width: calc(100% - 32px);
+        display: none;
+      }
+
+      ${Selectors.sandboxBanner} .ofauth-sandbox-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+      }
+
+      ${Selectors.sandboxBanner} .ofauth-sandbox-icon {
+        width: 20px;
+        height: 20px;
+        background: rgba(99, 102, 241, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+      }
+
+      ${Selectors.sandboxBanner} .ofauth-sandbox-title {
+        font-weight: 600;
+        font-size: 13px;
+        color: #c7d2fe;
+      }
+
+      ${Selectors.sandboxBanner} .ofauth-sandbox-desc {
+        font-size: 11px;
+        color: #a5b4fc;
+        margin-bottom: 10px;
+      }
+
+      ${Selectors.sandboxBanner} .ofauth-sandbox-creds {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      ${Selectors.sandboxBanner} .ofauth-sandbox-cred {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+
+      ${Selectors.sandboxBanner} .ofauth-sandbox-cred-label {
+        font-weight: 500;
+        color: #a5b4fc;
+        min-width: 40px;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      ${Selectors.sandboxBanner} .ofauth-sandbox-cred-value {
+        font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+        color: #e0e7ff;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      ${Selectors.sandboxBanner} .ofauth-sandbox-copy {
+        background: transparent;
+        border: none;
+        color: #a5b4fc;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.15s, color 0.15s;
+      }
+
+      ${Selectors.sandboxBanner} .ofauth-sandbox-copy:hover {
+        background: rgba(99, 102, 241, 0.2);
+        color: #c7d2fe;
+      }
+
+      ${Selectors.sandboxBanner} .ofauth-sandbox-minimize {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: transparent;
+        border: none;
+        color: #a5b4fc;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.15s;
+      }
+
+      ${Selectors.sandboxBanner} .ofauth-sandbox-minimize:hover {
+        background: rgba(99, 102, 241, 0.2);
+      }
+
+      ${Selectors.sandboxBanner}.minimized {
+        padding: 8px 12px;
+        cursor: pointer;
+      }
+
+      ${Selectors.sandboxBanner}.minimized .ofauth-sandbox-content {
+        display: none;
+      }
+
+      ${Selectors.sandboxBanner}.minimized .ofauth-sandbox-header {
+        margin-bottom: 0;
+      }
+
+      ${Selectors.sandboxBanner}.minimized .ofauth-sandbox-minimize {
+        display: none;
+      }
     `;
 
     document.head.appendChild(this.styleSheet);
@@ -209,6 +353,143 @@ class OFAuthLinkEmbed {
     this.overlay.addEventListener("click", () => {
       this.close();
     });
+  }
+
+  private updateSandboxBanner(info: SandboxInfoMetadata): void {
+    this.sandboxInfo = info;
+
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    const scenario = info.scenarios.find(s => s.id === info.activeScenarioId);
+    if (!scenario) {
+      this.hideSandboxBanner();
+      return;
+    }
+
+    if (!this.sandboxBanner) {
+      this.sandboxBanner = document.createElement("div");
+      this.sandboxBanner.id = Selectors.sandboxBanner.replace("#", "");
+      this.sandboxBanner.addEventListener("click", (e) => {
+        if (this.sandboxBanner?.classList.contains("minimized")) {
+          this.sandboxBanner.classList.remove("minimized");
+        }
+        e.stopPropagation();
+      });
+    }
+
+    // Determine credentials to show based on current screen
+    const isOtpScreen = info.currentScreen === "otp";
+    const emailDomain = `@${scenario.id}.sandbox.com`;
+
+    let credentialsHtml = "";
+
+    if (isOtpScreen && scenario.otpCode) {
+      credentialsHtml = `
+        <div class="ofauth-sandbox-cred">
+          <span class="ofauth-sandbox-cred-label">OTP</span>
+          <span class="ofauth-sandbox-cred-value">${scenario.otpCode}</span>
+          <button class="ofauth-sandbox-copy" data-copy="${scenario.otpCode}" title="Copy OTP">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+            </svg>
+          </button>
+        </div>
+      `;
+    } else {
+      credentialsHtml = `
+        <div class="ofauth-sandbox-cred">
+          <span class="ofauth-sandbox-cred-label">Email</span>
+          <span class="ofauth-sandbox-cred-value">[any]${emailDomain}</span>
+        </div>
+        <div class="ofauth-sandbox-cred">
+          <span class="ofauth-sandbox-cred-label">Pass</span>
+          <span class="ofauth-sandbox-cred-value">${scenario.password}</span>
+          <button class="ofauth-sandbox-copy" data-copy="${scenario.password}" title="Copy password">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+            </svg>
+          </button>
+        </div>
+      `;
+    }
+
+    this.sandboxBanner.innerHTML = `
+      <button class="ofauth-sandbox-minimize" title="Minimize">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+      <div class="ofauth-sandbox-header">
+        <div class="ofauth-sandbox-icon">🧪</div>
+        <span class="ofauth-sandbox-title">Sandbox Mode</span>
+      </div>
+      <div class="ofauth-sandbox-content">
+        <p class="ofauth-sandbox-desc">Use these test credentials to complete the demo.</p>
+        <div class="ofauth-sandbox-creds">
+          ${credentialsHtml}
+        </div>
+      </div>
+    `;
+
+    // Add event listeners for copy buttons
+    this.sandboxBanner.querySelectorAll(".ofauth-sandbox-copy").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const value = (btn as HTMLElement).dataset.copy;
+        if (value) {
+          navigator.clipboard.writeText(value).then(() => {
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = `
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            `;
+            setTimeout(() => {
+              btn.innerHTML = originalHtml;
+            }, 1500);
+          });
+        }
+      });
+    });
+
+    // Add minimize button listener
+    const minimizeBtn = this.sandboxBanner.querySelector(".ofauth-sandbox-minimize");
+    if (minimizeBtn) {
+      minimizeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.sandboxBanner?.classList.add("minimized");
+      });
+    }
+
+    this.showSandboxBanner();
+  }
+
+  private showSandboxBanner(): void {
+    if (!this.sandboxBanner || typeof document === "undefined") {
+      return;
+    }
+
+    if (!document.body.contains(this.sandboxBanner)) {
+      document.body.appendChild(this.sandboxBanner);
+    }
+
+    this.sandboxBanner.style.display = "block";
+  }
+
+  private hideSandboxBanner(): void {
+    if (!this.sandboxBanner || typeof document === "undefined") {
+      return;
+    }
+
+    this.sandboxBanner.style.display = "none";
+
+    if (document.body.contains(this.sandboxBanner)) {
+      document.body.removeChild(this.sandboxBanner);
+    }
   }
 
   private ensureIframe(): void {
@@ -350,6 +631,10 @@ class OFAuthLinkEmbed {
         this.handleInvalidSessionMessage(payload as EmbedLinkMessageInvalidSession);
         break;
       }
+      case "sandbox_info": {
+        this.handleSandboxInfoMessage(payload as EmbedLinkMessageSandboxInfo);
+        break;
+      }
       default:
         break;
     }
@@ -372,6 +657,13 @@ class OFAuthLinkEmbed {
   private handleInvalidSessionMessage(_message: EmbedLinkMessageInvalidSession): void {
     this.eventTarget.dispatchEvent(
       new CustomEvent("invalid_session", { cancelable: false }),
+    );
+  }
+
+  private handleSandboxInfoMessage(message: EmbedLinkMessageSandboxInfo): void {
+    const metadata = message.metadata;
+    this.eventTarget.dispatchEvent(
+      new CustomEvent<SandboxInfoMetadata>("sandbox_info", { detail: metadata, cancelable: false }),
     );
   }
 
@@ -456,6 +748,7 @@ class OFAuthLinkEmbed {
     }
 
     this.hideLoader();
+    this.hideSandboxBanner();
     this.detachElements();
 
     if (typeof document !== "undefined") {
@@ -463,6 +756,7 @@ class OFAuthLinkEmbed {
     }
 
     this.loaded = false;
+    this.sandboxInfo = null;
   }
 
   public destroy(): void {
@@ -486,6 +780,7 @@ class OFAuthLinkEmbed {
     this.styleSheet = null;
     this.iframe = null;
     this.overlay = null;
+    this.sandboxBanner = null;
     this.eventTarget = new EventTarget();
     this.destroyed = true;
   }
@@ -557,6 +852,17 @@ class OFAuthLinkEmbed {
     if (this.config.onInvalidSession) {
       Promise.resolve(this.config.onInvalidSession()).catch((error) => {
         console.error("[OFAuth] Error in onInvalidSession callback", error);
+      });
+    }
+  }
+
+  private sandboxInfoListener(event: CustomEvent<SandboxInfoMetadata>): void {
+    // Always update the sandbox banner when we receive sandbox info
+    this.updateSandboxBanner(event.detail);
+
+    if (this.config.onSandboxInfo) {
+      Promise.resolve(this.config.onSandboxInfo(event.detail)).catch((error) => {
+        console.error("[OFAuth] Error in onSandboxInfo callback", error);
       });
     }
   }
