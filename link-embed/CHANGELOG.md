@@ -1,5 +1,11 @@
 # @ofauth/link-embed
 
+## 5.0.0
+
+### Major Changes
+
+- bab3152: Add sandbox info banner
+
 ## 4.0.0
 
 ### Major Changes
