@@ -1,0 +1,49 @@
+
+> @ofauth/link-embed@4.0.0 build /Users/hussainrana/Documents/OFAuth/ofauth-mono/external/link-embed/link-embed
+> tsup --minify terser
+
+CLI Building entry: src/embed.ts
+CLI Using tsconfig: tsconfig.json
+CLI tsup v8.5.1
+CLI Using tsup config: /Users/hussainrana/Documents/OFAuth/ofauth-mono/external/link-embed/link-embed/tsup.config.ts
+CLI Building entry: src/component.ts
+CLI Using tsconfig: tsconfig.json
+CLI tsup v8.5.1
+CLI Using tsup config: /Users/hussainrana/Documents/OFAuth/ofauth-mono/external/link-embed/link-embed/tsup.config.ts
+CLI Target: es6
+CJS Build start
+ESM Build start
+CLI Target: es6
+CLI Cleaning output folder
+CJS Build start
+ESM Build start
+IIFE Build start
+TERSER Minifying with Terser
+TERSER Terser Minification success
+If you do not supply "output.name", you may not be able to access the exports of an IIFE bundle.
+TERSER Minifying with Terser
+TERSER Terser Minification success
+TERSER Minifying with Terser
+TERSER Terser Minification success
+DTS Build start
+DTS Build start
+TERSER Minifying with Terser
+TERSER Terser Minification success
+TERSER Minifying with Terser
+TERSER Terser Minification success
+CJS dist/component.cjs 21.92 KB
+CJS ⚡️ Build success in 599ms
+ESM dist/embed.js 19.37 KB
+ESM ⚡️ Build success in 590ms
+IIFE dist/embed.global.js 19.39 KB
+IIFE ⚡️ Build success in 590ms
+ESM dist/component.js 21.91 KB
+ESM ⚡️ Build success in 600ms
+CJS dist/embed.cjs 19.38 KB
+CJS ⚡️ Build success in 591ms
+DTS ⚡️ Build success in 1253ms
+DTS dist/component.d.cts 523.00 B
+DTS dist/component.d.ts  523.00 B
+DTS ⚡️ Build success in 1267ms
+DTS dist/embed.d.cts 5.17 KB
+DTS dist/embed.d.ts  5.17 KB

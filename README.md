@@ -12,7 +12,7 @@ npm install @ofauth/link-embed
 
 Depending on your use case, there are a few different ways to use the integrate the OFAuth Link Embed.
 
-Before using the OFAuth Link Embed, first create a [Link client session](https://docs.ofauth.com/guide/OnlyFans-authentication/Integrating).
+Before using the OFAuth Link Embed, create a client app in your [OFAuth dashboard](https://app.ofauth.com/platform/apps) and then create a [Link session](https://docs.ofauth.com/guides/link) via `/v2/link/init` with your `clientAppId`.
 
 ### 1. Using the ES Module
 
