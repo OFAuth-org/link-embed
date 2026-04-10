@@ -8,7 +8,6 @@ export const Selectors = {
 }
 
 export const OFAUTH_ORIGINS = [
-    "https://link-next.ofauth.com",
     "https://link.ofauth.com"
 ];
 
