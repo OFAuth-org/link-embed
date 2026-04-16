@@ -30,8 +30,11 @@ export function isAllowedOrigin(origin: string): boolean {
             return true;
         }
 
-        // Allow any *.ofauth.com subdomain for iframe origins
-        if (url.hostname.endsWith('.ofauth.com')) {
+        // Allow OFAuth production and staging worker subdomains for iframe origins
+        if (
+            url.hostname.endsWith('.ofauth.com') ||
+            url.hostname.endsWith('.ofauth.workers.dev')
+        ) {
             return true;
         }
     } catch {
